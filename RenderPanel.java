@@ -9,6 +9,10 @@ import java.util.*;
 
 public class RenderPanel extends JPanel {
     public static Color BACKGROUND_COLOR = Color.BLACK;
+    public static Color POSITIVE_COLOR = Color.YELLOW;
+    public static Color NEGATIVE_COLOR = Color.CYAN;
+    public static Color SURFACE_COLOR = new Color(100, 100, 100);
+    public static int SMOOTH_STEPS = 5;
 
     public Surface surf;
     public Stc stc;
@@ -22,22 +26,32 @@ public class RenderPanel extends JPanel {
             stc = Stc.load("data/pas_45_kanizsa-lh.stc");
             double[] values = stc.data[11];
 
+            double[] smoothValues = new double[surf.vertices.size()];
+            int[] smoothCount = new int[surf.vertices.size()];
+
             for (int q = 0; q < stc.vertexIndices.length; q++) {
-                surf.vertices.get(stc.vertexIndices[q]).value = values[q];
+                double baseValue = values[q];
+                Set<Vertex> visitedVertices = new HashSet<>();
+                Set<Vertex> currentGeneration = new HashSet<>();
+                currentGeneration.add(surf.vertices.get(stc.vertexIndices[q]));
+                for (int i = 0; i < SMOOTH_STEPS; i++) {
+                    Set<Vertex> nextGeneration = new HashSet<>();
+                    for (Vertex v : currentGeneration) {
+                        if (!visitedVertices.contains(v)) {
+                            visitedVertices.add(v);
+                            smoothValues[v.index] += baseValue;
+                            smoothCount[v.index]++;
+                            nextGeneration.addAll(v.neighbours);
+                        }
+                    }
+                    currentGeneration = nextGeneration;
+                }
             }
 
-            LinkedList<Vertex> remainingVertices = new LinkedList<>();
-            for (int i : stc.vertexIndices) {
-                remainingVertices.add(surf.vertices.get(i));
-            }
-            while (!remainingVertices.isEmpty()) {
-                Vertex v = remainingVertices.remove();
-                for (Vertex n : v.neighbours) {
-                    if (n.value == 0) {
-                        n.value = v.value;
-                        remainingVertices.add(n);
-                    }
-                }
+            for (int q = 0; q < surf.vertices.size(); q++) {
+                int div = smoothCount[q];
+                if (div == 0) div = 1;
+                surf.vertices.get(q).value = smoothValues[q] / div;
             }
 
             double lowThreshold = 0.01 * 1e-10;
@@ -148,25 +162,14 @@ public class RenderPanel extends JPanel {
                 Pixel p = zBuffer[x][y];
                 if (p != null) {
                     Point3d invLightDir = new Point3d(0, 0, 1);
-                    double shade = Math.log10(Math.abs(p.normal.angleCos(invLightDir))) * 20;
-
+                    double angleCos = Math.abs(p.normal.angleCos(invLightDir));
                     double val =
                         p.tri.v1.value * p.bar1 +
                         p.tri.v2.value * p.bar2 +
                         p.tri.v3.value * p.bar3;
 
-                    int v = Math.min(205, (int) (Math.abs(val) * 205));
-                    if (val >= 0) {
-                        int r = Math.max(0, (int) ((v + 50) + shade));
-                        int g = Math.max(0, (int) ((v + 50) + shade));
-                        int b = Math.max(0, (int) (50 + shade));
-                        output.setRGB(x, y, getPixel(new Color(r, g, b)));
-                    } else {
-                        int r = Math.max(0, (int) (50 + shade));
-                        int g = Math.max(0, (int) ((v + 50) + shade));
-                        int b = Math.max(0, (int) ((v + 50) + shade));
-                        output.setRGB(x, y, getPixel(new Color(r, g, b)));
-                    }
+                    Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, Math.abs(val)), angleCos);
+                    output.setRGB(x, y, getPixel(c));
                 }
             }
         }
@@ -229,5 +232,17 @@ public class RenderPanel extends JPanel {
         return (c.getRed() << 16) + (c.getGreen() << 8) + c.getBlue();
     }
 
+    Color interpolateColors(Color a, Color b, double t) {
+        t = Math.max(0d, Math.min(1d, t));
+        return new Color((int) (a.getRed() * t + b.getRed() * (1 - t)),
+                         (int) (a.getGreen() * t + b.getGreen() * (1 - t)),
+                         (int) (a.getBlue() * t + b.getBlue() * (1 - t)));
+    }
 
+    Color shadeColor(Color a, double shade) {
+        int sh = (int) Math.round(Math.log10(shade) * 20);
+        return new Color(Math.max(0, a.getRed() + sh),
+                         Math.max(0, a.getGreen() + sh),
+                         Math.max(0, a.getBlue() + sh));
+    }
 }

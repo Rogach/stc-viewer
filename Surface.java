@@ -41,7 +41,7 @@ public class Surface {
                     float x = buffer.getFloat();
                     float y = buffer.getFloat();
                     float z = buffer.getFloat();
-                    vertices.add(new Vertex(new Point3d(y, -z, x), 0));
+                    vertices.add(new Vertex(new Point3d(y, -z, x), 0, q));
                 }
 
                 List<Triangle> faces = new ArrayList<>(nface);
@@ -63,7 +63,7 @@ public class Surface {
 
     @Override
     public String toString() {
-        return String.format("Freesurface surface data, with %d vertices and %d faces", 
+        return String.format("Freesurface surface data, with %d vertices and %d faces",
                              vertices.size(), faces.size());
     }
 }

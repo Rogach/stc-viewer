@@ -3,11 +3,13 @@ import java.util.*;
 public class Vertex {
     public Point3d p;
     public double value;
+    public int index;
     public Set<Vertex> neighbours = new HashSet<>();
 
-    public Vertex(Point3d p, double value) {
+    public Vertex(Point3d p, double value, int index) {
         this.p = p;
         this.value = value;
+        this.index = index;
     }
 
     @Override

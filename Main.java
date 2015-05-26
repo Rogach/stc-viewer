@@ -12,19 +12,4 @@ public class Main {
         frame.setVisible(true);
     }
 
-    public static List<Triangle> generateTetrahedron() {
-        List<Triangle> tris = new ArrayList<>();
-
-        Vertex v1 = new Vertex(new Point3d(1, 1, 1), 0);
-        Vertex v2 = new Vertex(new Point3d(1, -1, -1), 0);
-        Vertex v3 = new Vertex(new Point3d(-1, 1, -1), 0);
-        Vertex v4 = new Vertex(new Point3d(-1, -1, 1), 0);
-
-        tris.add(new Triangle(v1, v2, v3));
-        tris.add(new Triangle(v1, v2, v4));
-        tris.add(new Triangle(v1, v3, v4));
-        tris.add(new Triangle(v2, v3, v4));
-
-        return tris;
-    }
 }
