@@ -103,7 +103,10 @@ public class Renderer {
             oldParams.surf == params.surf &&
             oldParams.stc == params.stc &&
             oldParams.heading == params.heading &&
-            oldParams.pitch == params.pitch) {
+            oldParams.pitch == params.pitch &&
+            oldParams.width == params.width &&
+            oldParams.height == params.height
+            ) {
             zBuffer = oldRenderer.zBuffer;
         } else {
             zBuffer = new Pixel[params.width][params.height];

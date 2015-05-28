@@ -12,7 +12,12 @@ public class Surface {
         this.faces = faces;
     }
 
+    private static WeakHashMap<String, Surface> surfaceCache = new WeakHashMap<>();
+
     public static Surface load(String filename) throws Exception {
+        Surface fromCache = surfaceCache.get(filename);
+        if (fromCache != null) return fromCache;
+
         File file = new File(filename);
         boolean isLeft = filename.contains("lh");
         try (FileInputStream fis = new FileInputStream(file);
@@ -63,7 +68,9 @@ public class Surface {
                     vertices.get(i3).neighbours.add(vertices.get(i2));
                     faces.add(new Triangle(vertices.get(i1), vertices.get(i2), vertices.get(i3)));
                 }
-                return new Surface(vertices, faces);
+                Surface surf = new Surface(vertices, faces);
+                surfaceCache.put(filename, surf);
+                return surf;
             }
     }
 

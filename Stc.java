@@ -16,7 +16,12 @@ public class Stc {
         this.data = data;
     }
 
+    private static WeakHashMap<String, Stc> stcCache = new WeakHashMap<>();
+
     public static Stc load(String filename) throws Exception {
+        Stc fromCache = stcCache.get(filename);
+        if (fromCache != null) return fromCache;
+
         File file = new File(filename);
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel fch = fis.getChannel()) {
@@ -41,7 +46,9 @@ public class Stc {
                     }
                 }
 
-                return new Stc(tmin, tstep, vertexIndices, data);
+                Stc stc = new Stc(tmin, tstep, vertexIndices, data);
+                stcCache.put(filename, stc);
+                return stc;
             }
     }
 

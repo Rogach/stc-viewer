@@ -13,6 +13,8 @@ import javafx.beans.binding.*;
 import java.io.*;
 import javax.imageio.*;
 import java.awt.image.BufferedImage;
+import javafx.collections.*;
+import java.util.*;
 
 public class Main extends Application {
 
@@ -21,6 +23,8 @@ public class Main extends Application {
     public static void main(String[] args) throws Exception {
         launch(new String[] {});
     }
+
+    private boolean haltRendering = false;
 
     Surface surf;
     Stc stc;
@@ -36,8 +40,10 @@ public class Main extends Application {
 
     RangeSlider thresholdSlider;
 
+    ListView<StcHolder> stcList;
+
     @Override
-    public void start(Stage stage) {
+    public void start(Stage stage) throws Exception {
         stage.setTitle("stc viewer");
 
         GroupLayoutPane root = new GroupLayoutPane();
@@ -113,8 +119,7 @@ public class Main extends Application {
         leftHemi.setOnAction(event -> {
                 leftHemi.setSelected(true);
                 rightHemi.setSelected(false);
-                loadHemisphere("lh");
-                updateRender();
+                selectStcForHemisphere("lh");
             });
         leftHemi.setStyle("-fx-border-radius: 10 0 0 10; -fx-background-radius: 10 0 0 10; -fx-padding: 5 10 5 12;");
         hemiButtons.getChildren().add(leftHemi);
@@ -124,8 +129,7 @@ public class Main extends Application {
         rightHemi.setOnAction(event -> {
                 rightHemi.setSelected(true);
                 leftHemi.setSelected(false);
-                loadHemisphere("rh");
-                updateRender();
+                selectStcForHemisphere("rh");
             });
         rightHemi.setStyle("-fx-border-radius: 0 10 10 0; -fx-background-radius: 0 10 10 0; -fx-padding: 5 12 5 10;");
         hemiButtons.getChildren().add(rightHemi);
@@ -146,6 +150,9 @@ public class Main extends Application {
         thresholdSlider = new RangeSlider();
         thresholdSlider.setLowValue(0);
         thresholdSlider.setHighValue(1);
+        timeSlider.setSnapToTicks(true);
+        timeSlider.setShowTickMarks(true);
+        timeSlider.setShowTickLabels(true);
         thresholdSlider.lowValueProperty().addListener(v -> {
                 if (!thresholdSlider.isLowValueChanging()) {
                     updateRender();
@@ -170,9 +177,83 @@ public class Main extends Application {
         form.add(thresholdSlider, 1, 2);
 
         Label thresholdsLabel = new Label("12 --- 20");
-         thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
+        thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
         form.add(thresholdsLabel, 1, 3);
         form.setHalignment(thresholdsLabel, HPos.CENTER);
+
+        ObservableList<StcHolder> stcFiles = FXCollections.observableArrayList();
+
+        HBox stcManipulation = new HBox(5);
+        form.add(stcManipulation, 0, 4);
+        form.setColumnSpan(stcManipulation, 2);
+
+        Button addStcs = new Button("Add stc file");
+        addStcs.setOnAction(e -> {
+                FileChooser fch = new FileChooser();
+                fch.setTitle("Select stc files");
+                fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("stc files", "*.stc"));
+                List<File> selectedFiles = fch.showOpenMultipleDialog(stage);
+                if (selectedFiles != null) {
+                    StcHolder selectedStc = stcList.getSelectionModel().getSelectedItem();
+                    for (File f : selectedFiles) {
+                        stcFiles.add(new StcHolder(f));
+                        FXCollections.sort(stcFiles, (a, b) -> a.toString().compareTo(b.toString()));
+                        if (selectedStc != null) {
+                            stcList.getSelectionModel().select(selectedStc);
+                        }
+                    }
+                }
+            });
+        stcManipulation.getChildren().add(addStcs);
+
+        Button clearStcs = new Button("Clear list");
+        clearStcs.setOnAction(e -> {
+                stcFiles.clear();
+            });
+        stcManipulation.getChildren().add(clearStcs);
+
+        stcList = new ListView<StcHolder>();
+        stcList.setMinHeight(138);
+        stcList.setPrefHeight(138);
+        stcList.setMaxHeight(138);
+        stcList.setItems(stcFiles);
+        stcList.getSelectionModel().selectedItemProperty().addListener(e -> {
+                StcHolder selectedStc = stcList.getSelectionModel().getSelectedItem();
+                if (selectedStc != null) {
+                    haltRendering = true;
+                    try {
+                        Stc stc = selectedStc.getStc();
+                        timeSlider.setMin(stc.tmin);
+                        timeSlider.setMax(stc.tmin + (stc.data.length - 1) * stc.tstep);
+                        timeSlider.setMajorTickUnit(stc.tstep * 10);
+                        timeSlider.setMinorTickCount(9);
+                        timeSlider.setBlockIncrement(stc.tstep);
+                        thresholdSlider.setMin(0);
+                        double maxValue = 0;
+                        for (int t = 0; t < stc.data.length; t++) {
+                            for (int i = 0; i < stc.data[t].length; i++) {
+                                if (stc.data[t][i] > maxValue) maxValue = stc.data[t][i];
+                            }
+                        }
+                        thresholdSlider.setMax(maxValue);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    if (selectedStc.getHemisphere().equals("lh")) {
+                        leftHemi.setSelected(true);
+                        rightHemi.setSelected(false);
+                    } else {
+                        leftHemi.setSelected(false);
+                        rightHemi.setSelected(true);
+                    }
+                    haltRendering = false;
+                }
+                updateRender();
+            });
+        form.add(stcList, 0, 5);
+        form.setColumnSpan(stcList, 2);
+        form.setHgrow(stcList, Priority.ALWAYS);
 
         root.getChildren().add(saveButton);
         root.getChildren().add(renderCanvas);
@@ -207,34 +288,19 @@ public class Main extends Application {
         Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
-        loadHemisphere("lh");
         updateRender();
     }
 
-    public void loadHemisphere(String hemi) {
-        try {
-            surf = Surface.load("data/" + hemi + ".inflated");
-            stc = Stc.load("data/pas_45_kanizsa-" + hemi + ".stc");
-
-            timeSlider.setMin(stc.tmin);
-            timeSlider.setMax(stc.tmin + (stc.data.length - 1) * stc.tstep);
-            timeSlider.setSnapToTicks(true);
-            timeSlider.setShowTickMarks(true);
-            timeSlider.setShowTickLabels(true);
-            timeSlider.setMajorTickUnit(50);
-            timeSlider.setMinorTickCount(9);
-            timeSlider.setBlockIncrement(stc.tstep);
-
-            thresholdSlider.setMin(0);
-            double maxValue = 0;
-            for (int t = 0; t < stc.data.length; t++) {
-                for (int i = 0; i < stc.data[t].length; i++) {
-                    if (stc.data[t][i] > maxValue) maxValue = stc.data[t][i];
+    public void selectStcForHemisphere(String hemi) {
+        StcHolder currentStc = stcList.getSelectionModel().getSelectedItem();
+        if (currentStc != null) {
+            String targetPath = currentStc.file.getAbsolutePath().replaceAll("(?i)[lr]h.stc", hemi + ".stc").toLowerCase();
+            for (StcHolder stc : stcList.getItems()) {
+                if (stc.file.getAbsolutePath().equals(targetPath)) {
+                    stcList.getSelectionModel().select(stc);
+                    break;
                 }
             }
-            thresholdSlider.setMax(maxValue);
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -242,16 +308,25 @@ public class Main extends Application {
         RenderParams params = new RenderParams();
         params.heading = Math.toRadians(headingSlider.getValue());
         params.pitch = Math.toRadians(pitchSlider.getValue());
-        params.surf = surf;
-        params.stc = stc;
-        params.time = (int) Math.round((timeSlider.getValue() - stc.tmin) / stc.tstep);
+        StcHolder selectedStc = stcList.getSelectionModel().getSelectedItem();
+        if (selectedStc != null) {
+            try {
+                params.surf = selectedStc.getSurface();
+                params.stc = selectedStc.getStc();
+                params.time = (int) Math.round((timeSlider.getValue() - params.stc.tmin) / params.stc.tstep);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         params.lowThreshold = thresholdSlider.getLowValue();
         params.highThreshold = thresholdSlider.getHighValue();
         return params;
     }
 
     public void updateRender() {
-        renderCanvas.updateRender(getRenderParams());
+        if (!haltRendering) {
+            renderCanvas.updateRender(getRenderParams());
+        }
     }
 
 }
