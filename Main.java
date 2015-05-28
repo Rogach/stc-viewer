@@ -2,6 +2,7 @@ import javafx.application.Application;
 import javafx.event.*;
 import javafx.scene.*;
 import javafx.scene.canvas.*;
+import javafx.scene.image.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.*;
@@ -16,11 +17,16 @@ public class Main extends Application {
         launch(new String[] {});
     }
 
+    RenderCanvas renderCanvas;
+    Slider headingSlider;
+    Slider pitchSlider;
+
     @Override
     public void start(Stage stage) {
         stage.setTitle("stc viewer");
 
         GroupLayoutPane root = new GroupLayoutPane();
+        root.setStyle("-fx-background-color: #aaa");
         root.setPadding(new Insets(5));
 
         Button saveButton = new Button("Save image");
@@ -28,22 +34,23 @@ public class Main extends Application {
                 throw new UnsupportedOperationException("unimpl");
             });
 
-        Canvas renderCanvas = new Canvas() {
-                @Override
-                public void resize(double width, double height) {
-                    if (this.widthProperty().get() != width || this.heightProperty().get() != height) {
-                        this.widthProperty().set(width);
-                        this.heightProperty().set(height);
-                        draw(this);
-                    }
-                }
-            };
+        renderCanvas = new RenderCanvas();
 
-        Slider headingSlider = new Slider(0, 360, 180);
+        headingSlider = new Slider(0, 360, 180);
         headingSlider.setOrientation(Orientation.HORIZONTAL);
+        headingSlider.valueChangingProperty().addListener((e, wasChanging, isChanging) -> {
+                if (!isChanging) {
+                    updateRender();
+                }
+            });
 
-        Slider pitchSlider = new Slider(0, 360, 180);
+        pitchSlider = new Slider(-90, 90, 0);
         pitchSlider.setOrientation(Orientation.VERTICAL);
+        pitchSlider.valueChangingProperty().addListener((e, wasChanging, isChanging) -> {
+                if (!isChanging) {
+                    updateRender();
+                }
+            });
 
         root.getChildren().add(saveButton);
         root.getChildren().add(renderCanvas);
@@ -74,17 +81,14 @@ public class Main extends Application {
         Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
-
+        updateRender();
     }
 
-    public static void draw(Canvas c) {
-        System.out.printf("draw(%s,%s)\n", c.getWidth(), c.getHeight());
-        GraphicsContext g = c.getGraphicsContext2D();
-        g.setFill(Color.BLACK);
-        g.fillRect(0, 0, c.getWidth(), c.getHeight());
-        g.setStroke(Color.RED);
-        g.strokeLine(0, 0, c.getWidth(), c.getHeight());
-        g.strokeLine(c.getWidth(), 0, 0, c.getHeight());
+    public void updateRender() {
+        RenderParams params = new RenderParams();
+        params.heading = Math.toRadians(headingSlider.getValue());
+        params.pitch = Math.toRadians(pitchSlider.getValue());
+        renderCanvas.updateRender(params);
     }
 
 }

@@ -1,4 +1,3 @@
-import javax.swing.*;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -7,19 +6,20 @@ import java.awt.image.*;
 import java.awt.geom.*;
 import java.util.*;
 
-public class RenderPanel extends JPanel {
+public class Renderer {
+
     public static Color BACKGROUND_COLOR = Color.BLACK;
     public static Color POSITIVE_COLOR = Color.YELLOW;
     public static Color NEGATIVE_COLOR = Color.CYAN;
     public static Color SURFACE_COLOR = new Color(100, 100, 100);
     public static int SMOOTH_STEPS = 5;
 
-    public Surface surf;
-    public Stc stc;
+    private RenderParams params;
+    private Surface surf;
+    private Stc stc;
 
-    public RenderParams params = null;
-
-    public RenderPanel() {
+    public Renderer(RenderParams params) {
+        this.params = params;
         try {
             surf = Surface.load("data/lh.inflated");
             centerVertices(surf.vertices);
@@ -79,23 +79,7 @@ public class RenderPanel extends JPanel {
         }
     }
 
-    public void setParams(RenderParams params) {
-        this.params = params;
-        this.repaint();
-    }
-
-    @Override
-    public void paintComponent(Graphics g1) {
-        super.paintComponent(g1);
-        Graphics2D g = (Graphics2D) g1;
-        if (params != null) {
-            params.width = this.getWidth();
-            params.height = this.getHeight();
-            g.drawImage(render(params), 0, 0, null);
-        }
-    }
-
-    BufferedImage render(RenderParams params) {
+    BufferedImage render() {
         BufferedImage img = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = img.createGraphics();
 
@@ -245,4 +229,5 @@ public class RenderPanel extends JPanel {
                          Math.max(0, a.getGreen() + sh),
                          Math.max(0, a.getBlue() + sh));
     }
+
 }
