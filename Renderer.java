@@ -15,90 +15,55 @@ public class Renderer {
     public static int SMOOTH_STEPS = 5;
 
     private RenderParams params;
+    private Renderer oldRenderer;
+    private RenderParams oldParams;
+
     private Surface surf;
     private Stc stc;
+    private double screenScale;
 
-    public Renderer(RenderParams params) {
+    public Renderer(RenderParams params, Renderer oldRenderer) {
         this.params = params;
-        try {
-            surf = Surface.load("data/lh.inflated");
-            centerVertices(surf.vertices);
-            stc = Stc.load("data/pas_45_kanizsa-lh.stc");
-            double[] values = stc.data[11];
-
-            double[] smoothValues = new double[surf.vertices.size()];
-            int[] smoothCount = new int[surf.vertices.size()];
-
-            for (int q = 0; q < stc.vertexIndices.length; q++) {
-                double baseValue = values[q];
-                Set<Vertex> visitedVertices = new HashSet<>();
-                Set<Vertex> currentGeneration = new HashSet<>();
-                currentGeneration.add(surf.vertices.get(stc.vertexIndices[q]));
-                for (int i = 0; i < SMOOTH_STEPS; i++) {
-                    Set<Vertex> nextGeneration = new HashSet<>();
-                    for (Vertex v : currentGeneration) {
-                        if (!visitedVertices.contains(v)) {
-                            visitedVertices.add(v);
-                            smoothValues[v.index] += baseValue;
-                            smoothCount[v.index]++;
-                            nextGeneration.addAll(v.neighbours);
-                        }
-                    }
-                    currentGeneration = nextGeneration;
-                }
-            }
-
-            for (int q = 0; q < surf.vertices.size(); q++) {
-                int div = smoothCount[q];
-                if (div == 0) div = 1;
-                surf.vertices.get(q).value = smoothValues[q] / div;
-            }
-
-            double lowThreshold = 0.01 * 1e-10;
-            double highThreshold = 0.03 * 1e-10;
-            double spread = highThreshold - lowThreshold;
-            for (Vertex vertex : surf.vertices) {
-                double v = vertex.value;
-                if (v >= 0) {
-                    if (v < lowThreshold) {
-                        v = 0;
-                    } else {
-                        v = (v - lowThreshold) / spread;
-                    }
-                } else {
-                    if (v > -lowThreshold) {
-                        v = 0;
-                    } else {
-                        v = (v + lowThreshold) / spread;
-                    }
-                }
-                vertex.value = v;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        this.oldRenderer = oldRenderer;
+        if (oldRenderer != null) {
+            this.oldParams = oldRenderer.params;
         }
     }
 
-    BufferedImage render() {
+    BufferedImage render() throws Exception {
+        if (oldParams != null && oldParams.surfaceFile.equals(params.surfaceFile)) {
+            surf = oldRenderer.surf;
+        } else {
+            surf = Surface.load(params.surfaceFile);
+            centerVertices(surf.vertices);
+        }
+
+        if (oldParams != null && oldParams.stcFile.equals(params.stcFile)) {
+            stc = oldRenderer.stc;
+        } else {
+            stc = Stc.load(params.stcFile);
+        }
+
+        if (oldParams != null &&
+            oldParams.surfaceFile.equals(params.surfaceFile) &&
+            oldParams.width == params.width && oldParams.height == params.height) {
+            screenScale = oldRenderer.screenScale;
+        } else {
+            screenScale = calculateScreenScale(surf.faces, Math.min(params.width, params.height));
+        }
+
+        if (oldParams != null &&
+            oldParams.surfaceFile.equals(params.surfaceFile) &&
+            oldParams.stcFile.equals(params.stcFile)) {
+            // don't apply data
+        } else {
+            applyStcDataWithSmoothing();
+        }
+
+
         BufferedImage img = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
+        renderPipeline(img, surf.faces);
 
-        long stt = System.currentTimeMillis();
-
-        g.setColor(BACKGROUND_COLOR);
-        g.fillRect(0, 0, params.width, params.height);
-
-        List<Triangle> tris = surf.faces;
-        params.scale = calculateScaleFactor(tris, Math.min(params.width, params.height));
-        renderPipeline(params, img, tris);
-
-        long end = System.currentTimeMillis();
-
-        g.setColor(Color.WHITE);
-        g.drawString(String.format("Tris: %d", tris.size()), 3, 14 * 1);
-        g.drawString(String.format("%d ms", end - stt), 3, 14 * 2);
-
-        g.dispose();
         return img;
     }
 
@@ -121,7 +86,7 @@ public class Renderer {
         }
     }
 
-    double calculateScaleFactor(List<Triangle> tris, double imgSize) {
+    double calculateScreenScale(List<Triangle> tris, double imgSize) {
         double maxDist = 0;
         for (Triangle t : tris) {
             double d = Math.max(t.v1.p.length(), Math.max(t.v2.p.length(), t.v3.p.length()));
@@ -130,11 +95,43 @@ public class Renderer {
         return imgSize / 2 / maxDist * 0.9;
     }
 
-    void renderPipeline(RenderParams params, BufferedImage output, List<Triangle> tris) {
+    void applyStcDataWithSmoothing() {
+        double[] values = stc.data[11];
+
+        double[] smoothValues = new double[surf.vertices.size()];
+        int[] smoothCount = new int[surf.vertices.size()];
+
+        for (int q = 0; q < stc.vertexIndices.length; q++) {
+            double baseValue = values[q];
+            Set<Vertex> visitedVertices = new HashSet<>();
+            Set<Vertex> currentGeneration = new HashSet<>();
+            currentGeneration.add(surf.vertices.get(stc.vertexIndices[q]));
+            for (int i = 0; i < SMOOTH_STEPS; i++) {
+                Set<Vertex> nextGeneration = new HashSet<>();
+                for (Vertex v : currentGeneration) {
+                    if (!visitedVertices.contains(v)) {
+                        visitedVertices.add(v);
+                        smoothValues[v.index] += baseValue;
+                        smoothCount[v.index]++;
+                        nextGeneration.addAll(v.neighbours);
+                    }
+                }
+                currentGeneration = nextGeneration;
+            }
+        }
+
+        for (int q = 0; q < surf.vertices.size(); q++) {
+            int div = smoothCount[q];
+            if (div == 0) div = 1;
+            surf.vertices.get(q).value = smoothValues[q] / div;
+        }
+    }
+
+    void renderPipeline(BufferedImage output, List<Triangle> tris) {
         Pixel[][] zBuffer = new Pixel[params.width][params.height];
         int i = 0;
         for (Triangle t : tris) {
-            List<Pixel> pixels = rasterizeTriangle(t, params);
+            List<Pixel> pixels = rasterizeTriangle(t);
             for (Pixel p : pixels) {
                 if (zBuffer[p.x][p.y] == null || zBuffer[p.x][p.y].depth < p.depth) {
                     zBuffer[p.x][p.y] = p;
@@ -152,23 +149,27 @@ public class Renderer {
                         p.tri.v2.value * p.bar2 +
                         p.tri.v3.value * p.bar3;
 
-                    Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, Math.abs(val)), angleCos);
+                    Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), angleCos);
                     output.setRGB(x, y, getPixel(c));
                 }
             }
         }
     }
 
-    List<Pixel> rasterizeTriangle(Triangle t, RenderParams params) {
+    double scaleValue(double val) {
+        return Math.min(1, Math.max(0, Math.abs(val) - params.lowThreshold) / (params.highThreshold - params.lowThreshold));
+    }
+
+    List<Pixel> rasterizeTriangle(Triangle t) {
         // move to camera space
-        Point3d v1p = cameraTransform(t.v1.p, params);
-        Point3d v2p = cameraTransform(t.v2.p, params);
-        Point3d v3p = cameraTransform(t.v3.p, params);
-        Point3d normal = cameraTransform(t.normal, params);
+        Point3d v1p = cameraTransform(t.v1.p);
+        Point3d v2p = cameraTransform(t.v2.p);
+        Point3d v3p = cameraTransform(t.v3.p);
+        Point3d normal = cameraTransform(t.normal);
         // project points on screen
-        Point2d p1 = screenProjection(v1p, params);
-        Point2d p2 = screenProjection(v2p, params);
-        Point2d p3 = screenProjection(v3p, params);
+        Point2d p1 = screenProjection(v1p);
+        Point2d p2 = screenProjection(v2p);
+        Point2d p3 = screenProjection(v3p);
 
         int minX = (int) Math.ceil(Math.min(p1.x, Math.min(p2.x, p3.x)));
         int maxX = (int) Math.ceil(Math.max(p1.x, Math.max(p2.x, p3.x)));
@@ -192,7 +193,7 @@ public class Renderer {
         return pixels;
     }
 
-    Point3d cameraTransform(Point3d pt, RenderParams params) {
+    Point3d cameraTransform(Point3d pt) {
         Matrix3 headingTransform = new Matrix3(new double[] {
                 Math.cos(params.heading), 0, Math.sin(params.heading),
                 0, 1, 0,
@@ -207,9 +208,9 @@ public class Renderer {
         return transform.multiply(pt);
     }
 
-    Point2d screenProjection(Point3d pt, RenderParams params) {
-        return new Point2d(pt.x * params.scale + params.width / 2,
-                           pt.y * params.scale + params.height / 2);
+    Point2d screenProjection(Point3d pt) {
+        return new Point2d(pt.x * screenScale + params.width / 2,
+                           pt.y * screenScale + params.height / 2);
     }
 
     int getPixel(Color c) {

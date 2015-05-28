@@ -88,6 +88,8 @@ public class Main extends Application {
         RenderParams params = new RenderParams();
         params.heading = Math.toRadians(headingSlider.getValue());
         params.pitch = Math.toRadians(pitchSlider.getValue());
+        params.surfaceFile = "data/lh.inflated";
+        params.stcFile = "data/pas_45_kanizsa-lh.stc";
         renderCanvas.updateRender(params);
     }
 

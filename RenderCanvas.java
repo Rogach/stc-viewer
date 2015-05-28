@@ -1,5 +1,8 @@
 import javafx.scene.canvas.*;
 import javafx.embed.swing.SwingFXUtils;
+import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 
 public class RenderCanvas extends Canvas {
 
@@ -10,13 +13,25 @@ public class RenderCanvas extends Canvas {
         updateRender();
     }
 
+    private Renderer oldRenderer = null;
+
     public void updateRender() {
         if (params != null) {
             GraphicsContext g = this.getGraphicsContext2D();
             params.width = (int) this.getWidth();
             params.height = (int) this.getHeight();
-            Renderer r = new Renderer(params);
-            g.drawImage(SwingFXUtils.toFXImage(r.render(), null), 0, 0);
+            Renderer r = new Renderer(params, oldRenderer);
+            try {
+                long stt = System.currentTimeMillis();
+                BufferedImage render = r.render();
+                long end = System.currentTimeMillis();
+                System.out.printf("rendering took %d ms\n", end - stt);
+
+                g.drawImage(SwingFXUtils.toFXImage(render, null), 0, 0);
+                oldRenderer = r;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
