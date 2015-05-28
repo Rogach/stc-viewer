@@ -8,6 +8,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.*;
 import javafx.stage.Stage;
 import javafx.geometry.*;
+import org.controlsfx.control.*;
+import javafx.beans.binding.*;
 
 public class Main extends Application {
 
@@ -29,6 +31,8 @@ public class Main extends Application {
 
     Slider timeSlider;
 
+    RangeSlider thresholdSlider;
+
     @Override
     public void start(Stage stage) {
         stage.setTitle("stc viewer");
@@ -46,6 +50,11 @@ public class Main extends Application {
 
         headingSlider = new Slider(0, 360, 180);
         headingSlider.setOrientation(Orientation.HORIZONTAL);
+        headingSlider.valueProperty().addListener(e -> {
+                if (!headingSlider.isValueChanging()) {
+                    updateRender();
+                }
+            });
         headingSlider.valueChangingProperty().addListener((e, wasChanging, isChanging) -> {
                 if (!isChanging) {
                     updateRender();
@@ -54,6 +63,11 @@ public class Main extends Application {
 
         pitchSlider = new Slider(-90, 90, 0);
         pitchSlider.setOrientation(Orientation.VERTICAL);
+        pitchSlider.valueProperty().addListener(e -> {
+                if (!pitchSlider.isValueChanging()) {
+                    updateRender();
+                }
+            });
         pitchSlider.valueChangingProperty().addListener((e, wasChanging, isChanging) -> {
                 if (!isChanging) {
                     updateRender();
@@ -107,6 +121,39 @@ public class Main extends Application {
         form.setHgrow(timeSlider, Priority.ALWAYS);
         form.add(timeSlider, 1, 1);
 
+        form.add(new Label("Thresholds"), 0, 2);
+
+        thresholdSlider = new RangeSlider();
+        thresholdSlider.setLowValue(0);
+        thresholdSlider.setHighValue(1);
+        thresholdSlider.lowValueProperty().addListener(v -> {
+                if (!thresholdSlider.isLowValueChanging()) {
+                    updateRender();
+                }
+            });
+        thresholdSlider.lowValueChangingProperty().addListener((v, wasChanging, isChanging) -> {
+                if (!isChanging && !thresholdSlider.isHighValueChanging()) {
+                    updateRender();
+                }
+            });
+        thresholdSlider.highValueProperty().addListener(v -> {
+                 if (!thresholdSlider.isHighValueChanging()) {
+                    updateRender();
+                }
+            });
+        thresholdSlider.highValueChangingProperty().addListener((v, wasChanging, isChanging) -> {
+                if (!isChanging && !thresholdSlider.isLowValueChanging()) {
+                    updateRender();
+                }
+            });
+        form.setHgrow(thresholdSlider, Priority.ALWAYS);
+        form.add(thresholdSlider, 1, 2);
+
+        Label thresholdsLabel = new Label("12 --- 20");
+        thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
+        form.add(thresholdsLabel, 1, 3);
+        form.setHalignment(thresholdsLabel, HPos.CENTER);
+
         root.getChildren().add(saveButton);
         root.getChildren().add(renderCanvas);
         root.getChildren().add(pitchSlider);
@@ -148,6 +195,7 @@ public class Main extends Application {
         try {
             surf = Surface.load("data/" + hemi + ".inflated");
             stc = Stc.load("data/pas_45_kanizsa-" + hemi + ".stc");
+
             timeSlider.setMin(stc.tmin);
             timeSlider.setMax(stc.tmin + (stc.data.length - 1) * stc.tstep);
             timeSlider.setSnapToTicks(true);
@@ -156,6 +204,15 @@ public class Main extends Application {
             timeSlider.setMajorTickUnit(50);
             timeSlider.setMinorTickCount(9);
             timeSlider.setBlockIncrement(stc.tstep);
+
+            thresholdSlider.setMin(0);
+            double maxValue = 0;
+            for (int t = 0; t < stc.data.length; t++) {
+                for (int i = 0; i < stc.data[t].length; i++) {
+                    if (stc.data[t][i] > maxValue) maxValue = stc.data[t][i];
+                }
+            }
+            thresholdSlider.setMax(maxValue);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -168,6 +225,8 @@ public class Main extends Application {
         params.surf = surf;
         params.stc = stc;
         params.time = (int) Math.round((timeSlider.getValue() - stc.tmin) / stc.tstep);
+        params.lowThreshold = thresholdSlider.getLowValue();
+        params.highThreshold = thresholdSlider.getHighValue();
         renderCanvas.updateRender(params);
     }
 
