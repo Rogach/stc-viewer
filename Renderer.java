@@ -8,7 +8,6 @@ import java.util.*;
 
 public class Renderer {
 
-    public static Color BACKGROUND_COLOR = Color.BLACK;
     public static Color POSITIVE_COLOR = Color.YELLOW;
     public static Color NEGATIVE_COLOR = Color.CYAN;
     public static Color SURFACE_COLOR = new Color(100, 100, 100);
@@ -21,9 +20,12 @@ public class Renderer {
     private Surface surf;
     private Stc stc;
     private double screenScale;
+    private Pixel[][] zBuffer;
 
     public Renderer(RenderParams params, Renderer oldRenderer) {
         this.params = params;
+        this.surf = params.surf;
+        this.stc = params.stc;
         this.oldRenderer = oldRenderer;
         if (oldRenderer != null) {
             this.oldParams = oldRenderer.params;
@@ -31,21 +33,8 @@ public class Renderer {
     }
 
     BufferedImage render() throws Exception {
-        if (oldParams != null && oldParams.surfaceFile.equals(params.surfaceFile)) {
-            surf = oldRenderer.surf;
-        } else {
-            surf = Surface.load(params.surfaceFile);
-            centerVertices(surf.vertices);
-        }
-
-        if (oldParams != null && oldParams.stcFile.equals(params.stcFile)) {
-            stc = oldRenderer.stc;
-        } else {
-            stc = Stc.load(params.stcFile);
-        }
-
         if (oldParams != null &&
-            oldParams.surfaceFile.equals(params.surfaceFile) &&
+            oldParams.surf == params.surf &&
             oldParams.width == params.width && oldParams.height == params.height) {
             screenScale = oldRenderer.screenScale;
         } else {
@@ -53,37 +42,19 @@ public class Renderer {
         }
 
         if (oldParams != null &&
-            oldParams.surfaceFile.equals(params.surfaceFile) &&
-            oldParams.stcFile.equals(params.stcFile)) {
+            oldParams.surf == params.surf &&
+            oldParams.stc == params.stc &&
+            oldParams.time == params.time
+            ) {
             // don't apply data
         } else {
             applyStcDataWithSmoothing();
         }
 
-
         BufferedImage img = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
         renderPipeline(img, surf.faces);
 
         return img;
-    }
-
-    void centerVertices(List<Vertex> vertices) {
-        double avgX = 0;
-        double avgY = 0;
-        double avgZ = 0;
-        for (Vertex v : vertices) {
-            avgX += v.p.x;
-            avgY += v.p.y;
-            avgZ += v.p.z;
-        }
-        avgX /= vertices.size();
-        avgY /= vertices.size();
-        avgZ /= vertices.size();
-        for (Vertex v : vertices) {
-            v.p.x -= avgX;
-            v.p.y -= avgY;
-            v.p.z -= avgZ;
-        }
     }
 
     double calculateScreenScale(List<Triangle> tris, double imgSize) {
@@ -96,7 +67,7 @@ public class Renderer {
     }
 
     void applyStcDataWithSmoothing() {
-        double[] values = stc.data[11];
+        double[] values = stc.data[params.time];
 
         double[] smoothValues = new double[surf.vertices.size()];
         int[] smoothCount = new int[surf.vertices.size()];
@@ -128,16 +99,24 @@ public class Renderer {
     }
 
     void renderPipeline(BufferedImage output, List<Triangle> tris) {
-        Pixel[][] zBuffer = new Pixel[params.width][params.height];
-        int i = 0;
-        for (Triangle t : tris) {
-            List<Pixel> pixels = rasterizeTriangle(t);
-            for (Pixel p : pixels) {
-                if (zBuffer[p.x][p.y] == null || zBuffer[p.x][p.y].depth < p.depth) {
-                    zBuffer[p.x][p.y] = p;
+        if (oldParams != null &&
+            oldParams.surf == params.surf &&
+            oldParams.stc == params.stc &&
+            oldParams.heading == params.heading &&
+            oldParams.pitch == params.pitch) {
+            zBuffer = oldRenderer.zBuffer;
+        } else {
+            zBuffer = new Pixel[params.width][params.height];
+            for (Triangle t : tris) {
+                List<Pixel> pixels = rasterizeTriangle(t);
+                for (Pixel p : pixels) {
+                    if (zBuffer[p.x][p.y] == null || zBuffer[p.x][p.y].depth < p.depth) {
+                        zBuffer[p.x][p.y] = p;
+                    }
                 }
             }
         }
+
         for (int x = 0; x < params.width; x++) {
             for (int y = 0; y < params.height; y++) {
                 Pixel p = zBuffer[x][y];

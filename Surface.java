@@ -14,6 +14,7 @@ public class Surface {
 
     public static Surface load(String filename) throws Exception {
         File file = new File(filename);
+        boolean isLeft = filename.contains("lh");
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel fch = fis.getChannel()) {
                 ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
@@ -41,8 +42,13 @@ public class Surface {
                     float x = buffer.getFloat();
                     float y = buffer.getFloat();
                     float z = buffer.getFloat();
-                    vertices.add(new Vertex(new Point3d(y, -z, x), 0, q));
+                    if (isLeft) {
+                        vertices.add(new Vertex(new Point3d(y, -z, x), 0, q));
+                    } else {
+                        vertices.add(new Vertex(new Point3d(-y, -z, -x), 0, q));
+                    }
                 }
+                centerVertices(vertices);
 
                 List<Triangle> faces = new ArrayList<>(nface);
                 for (int q = 0; q < nface; q++) {
@@ -65,5 +71,24 @@ public class Surface {
     public String toString() {
         return String.format("Freesurface surface data, with %d vertices and %d faces",
                              vertices.size(), faces.size());
+    }
+
+    static void centerVertices(List<Vertex> vertices) {
+        double avgX = 0;
+        double avgY = 0;
+        double avgZ = 0;
+        for (Vertex v : vertices) {
+            avgX += v.p.x;
+            avgY += v.p.y;
+            avgZ += v.p.z;
+        }
+        avgX /= vertices.size();
+        avgY /= vertices.size();
+        avgZ /= vertices.size();
+        for (Vertex v : vertices) {
+            v.p.x -= avgX;
+            v.p.y -= avgY;
+            v.p.z -= avgZ;
+        }
     }
 }
