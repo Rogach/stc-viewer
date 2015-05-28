@@ -6,10 +6,13 @@ import javafx.scene.image.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.*;
-import javafx.stage.Stage;
+import javafx.stage.*;
 import javafx.geometry.*;
 import org.controlsfx.control.*;
 import javafx.beans.binding.*;
+import java.io.*;
+import javax.imageio.*;
+import java.awt.image.BufferedImage;
 
 public class Main extends Application {
 
@@ -43,7 +46,24 @@ public class Main extends Application {
 
         Button saveButton = new Button("Save image");
         saveButton.setOnAction(event -> {
-                throw new UnsupportedOperationException("unimpl");
+                FileChooser fch = new FileChooser();
+                fch.setTitle("Select destination file");
+                fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG files", "*.png"));
+                File selectedFile = fch.showSaveDialog(stage);
+                if (selectedFile != null) {
+                    if (!selectedFile.getPath().toLowerCase().endsWith(".png")) {
+                        selectedFile = new File(selectedFile.getPath() + ".png");
+                    }
+                    RenderParams params = getRenderParams();
+                    params.width = MAX_IMAGE_SIZE;
+                    params.height = MAX_IMAGE_SIZE;
+                    try {
+                        BufferedImage img = renderCanvas.renderImage(params);
+                        ImageIO.write(img, "png", selectedFile);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             });
 
         renderCanvas = new RenderCanvas();
@@ -150,7 +170,7 @@ public class Main extends Application {
         form.add(thresholdSlider, 1, 2);
 
         Label thresholdsLabel = new Label("12 --- 20");
-        thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
+         thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
         form.add(thresholdsLabel, 1, 3);
         form.setHalignment(thresholdsLabel, HPos.CENTER);
 
@@ -218,7 +238,7 @@ public class Main extends Application {
         }
     }
 
-    public void updateRender() {
+    public RenderParams getRenderParams() {
         RenderParams params = new RenderParams();
         params.heading = Math.toRadians(headingSlider.getValue());
         params.pitch = Math.toRadians(pitchSlider.getValue());
@@ -227,7 +247,11 @@ public class Main extends Application {
         params.time = (int) Math.round((timeSlider.getValue() - stc.tmin) / stc.tstep);
         params.lowThreshold = thresholdSlider.getLowValue();
         params.highThreshold = thresholdSlider.getHighValue();
-        renderCanvas.updateRender(params);
+        return params;
+    }
+
+    public void updateRender() {
+        renderCanvas.updateRender(getRenderParams());
     }
 
 }

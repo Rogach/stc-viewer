@@ -15,6 +15,11 @@ public class RenderCanvas extends Canvas {
 
     private Renderer oldRenderer = null;
 
+    public BufferedImage renderImage(RenderParams params) throws Exception {
+        Renderer r = new Renderer(params, oldRenderer);
+        return r.render();
+    }
+
     public void updateRender() {
         if (params != null) {
             GraphicsContext g = this.getGraphicsContext2D();
