@@ -1,21 +1,23 @@
-import javax.swing.*;
-import java.awt.Graphics;
-import java.awt.image.*;
+import javafx.scene.canvas.*;
+import javafx.embed.swing.SwingFXUtils;
+import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 
-public class RenderPanel extends JPanel {
+public class RenderCanvas extends Canvas {
 
     private RenderParams params;
 
     public void updateRender(RenderParams params) {
         this.params = params;
-        repaint();
+        updateRender();
     }
 
     private Renderer oldRenderer = null;
 
-    @Override
-    public void paintComponent(Graphics g) {
+    public void updateRender() {
         if (params != null) {
+            GraphicsContext g = this.getGraphicsContext2D();
             params.width = (int) this.getWidth();
             params.height = (int) this.getHeight();
             Renderer r = new Renderer(params, oldRenderer);
@@ -25,11 +27,21 @@ public class RenderPanel extends JPanel {
                 long end = System.currentTimeMillis();
                 System.out.printf("rendering took %d ms\n", end - stt);
 
-                g.drawImage(render, 0, 0, null);
+                g.drawImage(SwingFXUtils.toFXImage(render, null), 0, 0);
                 oldRenderer = r;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
+
+    @Override
+    public void resize(double width, double height) {
+        if (this.widthProperty().get() != width || this.heightProperty().get() != height) {
+            this.widthProperty().set(width);
+            this.heightProperty().set(height);
+            updateRender();
+        }
+    }
+
 }
