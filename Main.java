@@ -117,9 +117,13 @@ public class Main extends Application {
         leftHemi.setSelected(true);
         leftHemi.setFocusTraversable(false);
         leftHemi.setOnAction(event -> {
-                leftHemi.setSelected(true);
-                rightHemi.setSelected(false);
-                selectStcForHemisphere("lh");
+                if (selectStcForHemisphere("lh")) {
+                    leftHemi.setSelected(true);
+                    rightHemi.setSelected(false);
+                } else {
+                    leftHemi.setSelected(false);
+                    rightHemi.setSelected(true);
+                }
             });
         leftHemi.setStyle("-fx-border-radius: 10 0 0 10; -fx-background-radius: 10 0 0 10; -fx-padding: 5 10 5 12;");
         hemiButtons.getChildren().add(leftHemi);
@@ -127,9 +131,13 @@ public class Main extends Application {
         rightHemi = new ToggleButton("Right");
         rightHemi.setFocusTraversable(false);
         rightHemi.setOnAction(event -> {
-                rightHemi.setSelected(true);
-                leftHemi.setSelected(false);
-                selectStcForHemisphere("rh");
+                if (selectStcForHemisphere("rh")) {
+                    rightHemi.setSelected(true);
+                    leftHemi.setSelected(false);
+                } else {
+                    rightHemi.setSelected(false);
+                    leftHemi.setSelected(true);
+                }
             });
         rightHemi.setStyle("-fx-border-radius: 0 10 10 0; -fx-background-radius: 0 10 10 0; -fx-padding: 5 12 5 10;");
         hemiButtons.getChildren().add(rightHemi);
@@ -142,6 +150,9 @@ public class Main extends Application {
                     updateRender();
                 }
             });
+        timeSlider.setSnapToTicks(true);
+        timeSlider.setShowTickMarks(true);
+        timeSlider.setShowTickLabels(true);
         form.setHgrow(timeSlider, Priority.ALWAYS);
         form.add(timeSlider, 1, 1);
 
@@ -150,9 +161,6 @@ public class Main extends Application {
         thresholdSlider = new RangeSlider();
         thresholdSlider.setLowValue(0);
         thresholdSlider.setHighValue(1);
-        timeSlider.setSnapToTicks(true);
-        timeSlider.setShowTickMarks(true);
-        timeSlider.setShowTickLabels(true);
         thresholdSlider.lowValueProperty().addListener(v -> {
                 if (!thresholdSlider.isLowValueChanging()) {
                     updateRender();
@@ -291,17 +299,18 @@ public class Main extends Application {
         updateRender();
     }
 
-    public void selectStcForHemisphere(String hemi) {
+    public boolean selectStcForHemisphere(String hemi) {
         StcHolder currentStc = stcList.getSelectionModel().getSelectedItem();
         if (currentStc != null) {
             String targetPath = currentStc.file.getAbsolutePath().replaceAll("(?i)[lr]h.stc", hemi + ".stc").toLowerCase();
             for (StcHolder stc : stcList.getItems()) {
                 if (stc.file.getAbsolutePath().equals(targetPath)) {
                     stcList.getSelectionModel().select(stc);
-                    break;
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     public RenderParams getRenderParams() {
