@@ -25,6 +25,8 @@ public class Stc {
         File file = new File(filename);
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel fch = fis.getChannel()) {
+                long stt = System.currentTimeMillis();
+
                 ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
                 buffer.order(ByteOrder.BIG_ENDIAN);
 
@@ -48,6 +50,10 @@ public class Stc {
 
                 Stc stc = new Stc(tmin, tstep, vertexIndices, data);
                 stcCache.put(filename, stc);
+
+                long end = System.currentTimeMillis();
+                System.out.printf("stc loading took %d ms\n", end - stt);
+
                 return stc;
             }
     }

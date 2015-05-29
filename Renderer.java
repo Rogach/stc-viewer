@@ -11,7 +11,7 @@ public class Renderer {
     public static Color POSITIVE_COLOR = Color.YELLOW;
     public static Color NEGATIVE_COLOR = Color.CYAN;
     public static Color SURFACE_COLOR = new Color(100, 100, 100);
-    public static int SMOOTH_STEPS = 5;
+    public static int SMOOTH_STEPS = 3;
 
     private RenderParams params;
     private Renderer oldRenderer;
@@ -48,7 +48,7 @@ public class Renderer {
             ) {
             // don't apply data
         } else {
-            applyStcDataWithSmoothing();
+            applyStcData();
         }
 
         BufferedImage img = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
@@ -66,36 +66,30 @@ public class Renderer {
         return imgSize / 2 / maxDist * 0.9;
     }
 
-    void applyStcDataWithSmoothing() {
-        double[] values = stc.data[params.time];
+    void applyStcData() {
+        long stt = System.currentTimeMillis();
 
-        double[] smoothValues = new double[surf.vertices.size()];
-        int[] smoothCount = new int[surf.vertices.size()];
+        double[] values = stc.data[params.time];
 
         for (int q = 0; q < stc.vertexIndices.length; q++) {
             double baseValue = values[q];
-            Set<Vertex> visitedVertices = new HashSet<>();
             Set<Vertex> currentGeneration = new HashSet<>();
             currentGeneration.add(surf.vertices.get(stc.vertexIndices[q]));
-            for (int i = 0; i < SMOOTH_STEPS; i++) {
+            for (int i = 0; i < SMOOTH_STEPS - 1; i++) {
                 Set<Vertex> nextGeneration = new HashSet<>();
                 for (Vertex v : currentGeneration) {
-                    if (!visitedVertices.contains(v)) {
-                        visitedVertices.add(v);
-                        smoothValues[v.index] += baseValue;
-                        smoothCount[v.index]++;
-                        nextGeneration.addAll(v.neighbours);
-                    }
+                    v.value = baseValue;
+                    nextGeneration.addAll(v.neighbours);
                 }
                 currentGeneration = nextGeneration;
             }
+            for (Vertex v : currentGeneration) {
+                v.value = baseValue;
+            }
         }
 
-        for (int q = 0; q < surf.vertices.size(); q++) {
-            int div = smoothCount[q];
-            if (div == 0) div = 1;
-            surf.vertices.get(q).value = smoothValues[q] / div;
-        }
+        long end = System.currentTimeMillis();
+        System.out.printf("data application took %d ms\n", end - stt);
     }
 
     void renderPipeline(BufferedImage output, List<Triangle> tris) {
@@ -105,10 +99,14 @@ public class Renderer {
             oldParams.heading == params.heading &&
             oldParams.pitch == params.pitch &&
             oldParams.width == params.width &&
-            oldParams.height == params.height
+            oldParams.height == params.height &&
+            oldParams.time == params.time
             ) {
             zBuffer = oldRenderer.zBuffer;
         } else {
+            long stt = System.currentTimeMillis();
+
+            calculateCameraTransform();
             zBuffer = new Pixel[params.width][params.height];
             for (Triangle t : tris) {
                 List<Pixel> pixels = rasterizeTriangle(t);
@@ -118,7 +116,12 @@ public class Renderer {
                     }
                 }
             }
+
+            long end = System.currentTimeMillis();
+            System.out.printf("z-buffering took %d ms\n", end - stt);
         }
+
+        long stt = System.currentTimeMillis();
 
         for (int x = 0; x < params.width; x++) {
             for (int y = 0; y < params.height; y++) {
@@ -126,16 +129,15 @@ public class Renderer {
                 if (p != null) {
                     Point3d invLightDir = new Point3d(0, 0, 1);
                     double angleCos = Math.abs(p.normal.angleCos(invLightDir));
-                    double val =
-                        p.tri.v1.value * p.bar1 +
-                        p.tri.v2.value * p.bar2 +
-                        p.tri.v3.value * p.bar3;
-
+                    double val = p.value;
                     Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), angleCos);
                     output.setRGB(x, y, getPixel(c));
                 }
             }
         }
+
+        long end = System.currentTimeMillis();
+        System.out.printf("image drawing took %d ms\n", end - stt);
     }
 
     double scaleValue(double val) {
@@ -153,29 +155,31 @@ public class Renderer {
         Point2d p2 = screenProjection(v2p);
         Point2d p3 = screenProjection(v3p);
 
-        int minX = (int) Math.ceil(Math.min(p1.x, Math.min(p2.x, p3.x)));
+        int minX = (int) Math.floor(Math.min(p1.x, Math.min(p2.x, p3.x)));
         int maxX = (int) Math.ceil(Math.max(p1.x, Math.max(p2.x, p3.x)));
-        int minY = (int) Math.ceil(Math.min(p1.y, Math.min(p2.y, p3.y)));
+        int minY = (int) Math.floor(Math.min(p1.y, Math.min(p2.y, p3.y)));
         int maxY = (int) Math.ceil(Math.max(p1.y, Math.max(p2.y, p3.y)));
 
         double triangleArea = (p1.y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - p1.x);
 
         List<Pixel> pixels = new ArrayList<>();
-         for (int x = minX; x <= maxX; x++) {
+        for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 double b1 = ((y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - x)) / triangleArea;
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
+                    double value = t.v1.value * b1 + t.v2.value * b2 + t.v3.value * b3;
                     double depth = v1p.z * b1 + v2p.z * b2 + v3p.z * b3;
-                    pixels.add(new Pixel(x, y, b1, b2, b3, depth, t, normal));
+                    pixels.add(new Pixel(x, y, value, depth, t, normal));
                 }
             }
         }
         return pixels;
     }
 
-    Point3d cameraTransform(Point3d pt) {
+    private Matrix3 cameraTransformMatrix;
+    void calculateCameraTransform() {
         Matrix3 headingTransform = new Matrix3(new double[] {
                 Math.cos(params.heading), 0, Math.sin(params.heading),
                 0, 1, 0,
@@ -186,8 +190,11 @@ public class Renderer {
                 0, Math.cos(params.pitch), -Math.sin(params.pitch),
                 0, Math.sin(params.pitch), Math.cos(params.pitch)
             });
-        Matrix3 transform = pitchTransform.multiply(headingTransform);
-        return transform.multiply(pt);
+        cameraTransformMatrix = pitchTransform.multiply(headingTransform);
+    }
+
+    Point3d cameraTransform(Point3d pt) {
+        return cameraTransformMatrix.multiply(pt);
     }
 
     Point2d screenProjection(Point3d pt) {
