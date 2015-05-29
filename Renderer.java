@@ -100,10 +100,16 @@ public class Renderer {
             zBuffer = oldRenderer.zBuffer;
         } else {
             calculateCameraTransform();
+
             zBuffer = new Pixel[params.width][params.height];
+
+            List<Pixel> pixels = new ArrayList<>();
             for (Triangle t : tris) {
-                List<Pixel> pixels = rasterizeTriangle(t);
-                for (Pixel p : pixels) {
+                rasterizeTriangle(t, pixels);
+            }
+
+            for (Pixel p : pixels) {
+                if (p.x >= 0 && p.y >= 0 && p.x < params.width && p.y < params.height) {
                     if (zBuffer[p.x][p.y] == null || zBuffer[p.x][p.y].depth < p.depth) {
                         zBuffer[p.x][p.y] = p;
                     }
@@ -129,7 +135,7 @@ public class Renderer {
         return Math.min(1, Math.max(0, Math.abs(val) - params.lowThreshold) / (params.highThreshold - params.lowThreshold));
     }
 
-    List<Pixel> rasterizeTriangle(Triangle t) {
+    void rasterizeTriangle(Triangle t, List<Pixel> pixels) {
         // move to camera space
         Point3d v1p = cameraTransform(t.v1.p);
         Point3d v2p = cameraTransform(t.v2.p);
@@ -140,27 +146,29 @@ public class Renderer {
         Point2d p2 = screenProjection(v2p);
         Point2d p3 = screenProjection(v3p);
 
-        int minX = (int) Math.floor(Math.min(p1.x, Math.min(p2.x, p3.x)));
-        int maxX = (int) Math.ceil(Math.max(p1.x, Math.max(p2.x, p3.x)));
-        int minY = (int) Math.floor(Math.min(p1.y, Math.min(p2.y, p3.y)));
-        int maxY = (int) Math.ceil(Math.max(p1.y, Math.max(p2.y, p3.y)));
+        // our triangles are always very small
+        // so we can skip doing barycentrics
+        // and just average three vertices
+        double value = (t.v1.value + t.v2.value + t.v3.value) / 3;
+        double depth = (v1p.z + v2p.z + v3p.z) / 3;
+
+        int minX = (int) Math.ceil(Math.min(p1.x, Math.min(p2.x, p3.x)));
+        int maxX = (int) Math.floor(Math.max(p1.x, Math.max(p2.x, p3.x)));
+        int minY = (int) Math.ceil(Math.min(p1.y, Math.min(p2.y, p3.y)));
+        int maxY = (int) Math.floor(Math.max(p1.y, Math.max(p2.y, p3.y)));
 
         double triangleArea = (p1.y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - p1.x);
 
-        List<Pixel> pixels = new ArrayList<>();
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 double b1 = ((y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - x)) / triangleArea;
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                    double value = t.v1.value * b1 + t.v2.value * b2 + t.v3.value * b3;
-                    double depth = v1p.z * b1 + v2p.z * b2 + v3p.z * b3;
                     pixels.add(new Pixel(x, y, value, depth, t, normal));
                 }
             }
         }
-        return pixels;
     }
 
     private Matrix3 cameraTransformMatrix;
