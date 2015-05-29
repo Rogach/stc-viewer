@@ -67,8 +67,6 @@ public class Renderer {
     }
 
     void applyStcData() {
-        long stt = System.currentTimeMillis();
-
         double[] values = stc.data[params.time];
 
         for (int q = 0; q < stc.vertexIndices.length; q++) {
@@ -87,9 +85,6 @@ public class Renderer {
                 v.value = baseValue;
             }
         }
-
-        long end = System.currentTimeMillis();
-        System.out.printf("data application took %d ms\n", end - stt);
     }
 
     void renderPipeline(BufferedImage output, List<Triangle> tris) {
@@ -104,8 +99,6 @@ public class Renderer {
             ) {
             zBuffer = oldRenderer.zBuffer;
         } else {
-            long stt = System.currentTimeMillis();
-
             calculateCameraTransform();
             zBuffer = new Pixel[params.width][params.height];
             for (Triangle t : tris) {
@@ -116,12 +109,7 @@ public class Renderer {
                     }
                 }
             }
-
-            long end = System.currentTimeMillis();
-            System.out.printf("z-buffering took %d ms\n", end - stt);
         }
-
-        long stt = System.currentTimeMillis();
 
         for (int x = 0; x < params.width; x++) {
             for (int y = 0; y < params.height; y++) {
@@ -135,9 +123,6 @@ public class Renderer {
                 }
             }
         }
-
-        long end = System.currentTimeMillis();
-        System.out.printf("image drawing took %d ms\n", end - stt);
     }
 
     double scaleValue(double val) {

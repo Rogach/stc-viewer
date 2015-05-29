@@ -22,8 +22,6 @@ public class Surface {
         boolean isLeft = filename.contains("lh");
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel fch = fis.getChannel()) {
-                long stt = System.currentTimeMillis();
-
                 ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
                 buffer.order(ByteOrder.BIG_ENDIAN);
 
@@ -72,9 +70,6 @@ public class Surface {
                 }
                 Surface surf = new Surface(vertices, faces);
                 surfaceCache.put(filename, surf);
-
-                long end = System.currentTimeMillis();
-                System.out.printf("surface loading took %d ms\n", end - stt);
 
                 return surf;
             }
