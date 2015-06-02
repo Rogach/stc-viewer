@@ -10,4 +10,4 @@ libraryDependencies := Seq("org.controlsfx" % "controlsfx" % "8.20.8")
 
 packageOptions in (Compile, packageBin) := Seq(Package.ManifestAttributes("Main-Class" -> "Main"))
 
-assemblyJarName in assembly := "target/stc-viewer.jar"
+assemblyJarName in assembly := "stc-viewer.jar"
