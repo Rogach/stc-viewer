@@ -117,17 +117,8 @@ public class Renderer {
 
             zBuffer = new Pixel[params.width][params.height];
 
-            List<Pixel> pixels = new ArrayList<>();
             for (Triangle t : tris) {
-                rasterizeTriangle(t, pixels);
-            }
-
-            for (Pixel p : pixels) {
-                if (p.x >= 0 && p.y >= 0 && p.x < params.width && p.y < params.height) {
-                    if (zBuffer[p.x][p.y] == null || zBuffer[p.x][p.y].depth < p.depth) {
-                        zBuffer[p.x][p.y] = p;
-                    }
-                }
+                rasterizeTriangle(t);
             }
         }
 
@@ -165,7 +156,7 @@ public class Renderer {
         return Math.min(1, Math.max(0, Math.abs(val) - params.lowThreshold) / (params.highThreshold - params.lowThreshold));
     }
 
-    void rasterizeTriangle(Triangle t, List<Pixel> pixels) {
+    void rasterizeTriangle(Triangle t) {
         // move to camera space
         Point3d v1p = cameraTransform(t.v1.p);
         Point3d v2p = cameraTransform(t.v2.p);
@@ -194,7 +185,10 @@ public class Renderer {
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                    pixels.add(new Pixel(x, y, depth, t, normal));
+                    Pixel prev = zBuffer[x][y];
+                    if (prev == null || prev.depth < depth) {
+                        zBuffer[x][y] = new Pixel(x, y, depth, t, normal);
+                    }
                 }
             }
         }
