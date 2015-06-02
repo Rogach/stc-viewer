@@ -137,9 +137,9 @@ public class Renderer {
         } else {
             result = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
 
-            for (int x = 0; x < params.width; x++) {
-                for (int y = 0; y < params.height; y++) {
-                    Pixel p = zBuffer[x][y];
+            for (int y = 0; y < params.height; y++) {
+                for (int x = 0; x < params.width; x++) {
+                    Pixel p = zBuffer[y][x];
                     if (p != null) {
                         Point3d invLightDir = new Point3d(0, 0, 1);
                         double angleCos = Math.abs(p.normal.angleCos(invLightDir));
@@ -187,7 +187,7 @@ public class Renderer {
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
                     Pixel prev = zBuffer[x][y];
                     if (prev == null || prev.depth < depth) {
-                        zBuffer[x][y] = new Pixel(x, y, depth, t, normal);
+                        zBuffer[y][x] = new Pixel(x, y, depth, t, normal);
                     }
                 }
             }
