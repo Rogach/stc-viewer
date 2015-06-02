@@ -208,6 +208,11 @@ public class Renderer {
     private double tzz;
 
     void calculateCameraTransform() {
+        Matrix3 scaleTransform = new Matrix3(new double[] {
+                screenScale, 0, 0,
+                0, screenScale, 0,
+                0, 0, screenScale
+            });
         Matrix3 headingTransform = new Matrix3(new double[] {
                 Math.cos(params.heading), 0, Math.sin(params.heading),
                 0, 1, 0,
@@ -218,16 +223,16 @@ public class Renderer {
                 0, Math.cos(params.pitch), -Math.sin(params.pitch),
                 0, Math.sin(params.pitch), Math.cos(params.pitch)
             });
-        Matrix3 cameraTransformMatrix = pitchTransform.multiply(headingTransform);
-        txx = cameraTransformMatrix.data[0] * screenScale;
+        Matrix3 cameraTransformMatrix = scaleTransform.multiply(pitchTransform.multiply(headingTransform));
+        txx = cameraTransformMatrix.data[0];
         txy = cameraTransformMatrix.data[1];
         txz = cameraTransformMatrix.data[2];
         tyx = cameraTransformMatrix.data[3];
-        tyy = cameraTransformMatrix.data[4] * screenScale;
+        tyy = cameraTransformMatrix.data[4];
         tyz = cameraTransformMatrix.data[5];
         tzx = cameraTransformMatrix.data[6];
         tzy = cameraTransformMatrix.data[7];
-        tzz = cameraTransformMatrix.data[8] * screenScale;
+        tzz = cameraTransformMatrix.data[8];
     }
 
     Point3d cameraTransform(Point3d pt) {
