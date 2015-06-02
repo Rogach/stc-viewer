@@ -13,6 +13,8 @@ public class Renderer {
     public static Color SURFACE_COLOR = new Color(100, 100, 100);
     public static int SMOOTH_STEPS = 3;
 
+    Point3d invLightDir = new Point3d(0, 0, 1);
+
     private RenderParams params;
     private Renderer oldRenderer;
     private RenderParams oldParams;
@@ -113,10 +115,12 @@ public class Renderer {
             oldParams.height == params.height
             ) {
             zBuffer = oldRenderer.zBuffer;
+            zBufferWidth = oldRenderer.zBufferWidth;
         } else {
             calculateCameraTransform();
 
             zBuffer = new Pixel[params.width * params.height];
+
             zBufferWidth = params.width;
 
             for (Triangle t : tris) {
@@ -143,10 +147,8 @@ public class Renderer {
                 for (int x = 0; x < params.width; x++) {
                     Pixel p = zBuffer[y * zBufferWidth + x];
                     if (p != null) {
-                        Point3d invLightDir = new Point3d(0, 0, 1);
-                        double angleCos = Math.abs(p.normal.angleCos(invLightDir));
                         double val = (p.tri.v1.value + p.tri.v2.value + p.tri.v3.value) / 3;
-                        Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), angleCos);
+                        Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), p.normalCos);
                         result.setRGB(x, y, getPixel(c));
                     }
                 }
@@ -160,19 +162,15 @@ public class Renderer {
 
     void rasterizeTriangle(Triangle t) {
         // move to camera space
-        Point3d v1p = cameraTransform(t.v1.p);
-        Point3d v2p = cameraTransform(t.v2.p);
-        Point3d v3p = cameraTransform(t.v3.p);
+        Point3d p1 = cameraTransform(t.v1.p);
+        Point3d p2 = cameraTransform(t.v2.p);
+        Point3d p3 = cameraTransform(t.v3.p);
         Point3d normal = cameraTransform(t.normal);
-        // project points on screen
-        Point2d p1 = screenProjection(v1p);
-        Point2d p2 = screenProjection(v2p);
-        Point2d p3 = screenProjection(v3p);
 
         // our triangles are always very small
         // so we can skip doing barycentrics
         // and just average three vertices
-        double depth = (v1p.z + v2p.z + v3p.z) / 3;
+        double depth = (p1.z + p2.z + p3.z) / 3;
 
         int minX = (int) Math.ceil(Math.min(p1.x, Math.min(p2.x, p3.x)));
         int maxX = (int) Math.floor(Math.max(p1.x, Math.max(p2.x, p3.x)));
@@ -187,17 +185,28 @@ public class Renderer {
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                    int zBufferIndex = y * zBufferWidth + x;
+                    int zBufferIndex = ((y + params.height / 2) * zBufferWidth + (x + params.width / 2));
                     Pixel prev = zBuffer[zBufferIndex];
                     if (prev == null || prev.depth < depth) {
-                        zBuffer[zBufferIndex] = new Pixel(depth, t, normal);
+                        double normalCos = Math.abs(normal.angleCos(invLightDir));
+                        zBuffer[zBufferIndex] = new Pixel(depth, t, normalCos);
                     }
                 }
             }
         }
     }
 
-    private Matrix3 cameraTransformMatrix;
+    // precalculated transform values
+    private double txx;
+    private double txy;
+    private double txz;
+    private double tyx;
+    private double tyy;
+    private double tyz;
+    private double tzx;
+    private double tzy;
+    private double tzz;
+
     void calculateCameraTransform() {
         Matrix3 headingTransform = new Matrix3(new double[] {
                 Math.cos(params.heading), 0, Math.sin(params.heading),
@@ -209,16 +218,22 @@ public class Renderer {
                 0, Math.cos(params.pitch), -Math.sin(params.pitch),
                 0, Math.sin(params.pitch), Math.cos(params.pitch)
             });
-        cameraTransformMatrix = pitchTransform.multiply(headingTransform);
+        Matrix3 cameraTransformMatrix = pitchTransform.multiply(headingTransform);
+        txx = cameraTransformMatrix.data[0] * screenScale;
+        txy = cameraTransformMatrix.data[1];
+        txz = cameraTransformMatrix.data[2];
+        tyx = cameraTransformMatrix.data[3];
+        tyy = cameraTransformMatrix.data[4] * screenScale;
+        tyz = cameraTransformMatrix.data[5];
+        tzx = cameraTransformMatrix.data[6];
+        tzy = cameraTransformMatrix.data[7];
+        tzz = cameraTransformMatrix.data[8] * screenScale;
     }
 
     Point3d cameraTransform(Point3d pt) {
-        return cameraTransformMatrix.multiply(pt);
-    }
-
-    Point2d screenProjection(Point3d pt) {
-        return new Point2d(pt.x * screenScale + params.width / 2,
-                           pt.y * screenScale + params.height / 2);
+        return new Point3d(pt.x * txx + pt.y * txy + pt.z * txz,
+                           pt.x * tyx + pt.y * tyy + pt.z * tyz,
+                           pt.x * tzx + pt.y * tzy + pt.z * tzz);
     }
 
     int getPixel(Color c) {

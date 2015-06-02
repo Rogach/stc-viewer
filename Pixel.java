@@ -1,11 +1,11 @@
 public class Pixel {
     public double depth;
     public Triangle tri;
-    public Point3d normal;
+    public double normalCos;
 
-    public Pixel(double depth, Triangle tri, Point3d normal) {
+    public Pixel(double depth, Triangle tri, double normalCos) {
         this.depth = depth;
         this.tri = tri;
-        this.normal = normal;
+        this.normalCos = normalCos;
     }
 }

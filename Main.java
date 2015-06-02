@@ -172,7 +172,7 @@ public class Main extends Application {
         thresholdSlider.highValueProperty().addListener(v -> {
                  if (!thresholdSlider.isHighValueChanging()) {
                     updateRender();
-                }
+                 }
             });
         thresholdSlider.highValueChangingProperty().addListener((v, wasChanging, isChanging) -> {
                 if (!isChanging && !thresholdSlider.isLowValueChanging()) {
