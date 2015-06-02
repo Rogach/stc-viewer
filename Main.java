@@ -146,9 +146,7 @@ public class Main extends Application {
 
         timeSlider = new Slider();
         timeSlider.valueProperty().addListener(v -> {
-                if (!timeSlider.isValueChanging()) {
-                    updateRender();
-                }
+                updateRender();
             });
         timeSlider.setSnapToTicks(true);
         timeSlider.setShowTickMarks(true);

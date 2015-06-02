@@ -20,7 +20,9 @@ public class Renderer {
     private Surface surf;
     private Stc stc;
     private double screenScale;
+    private int[] stcMapping;
     private Pixel[][] zBuffer;
+    private BufferedImage result;
 
     public Renderer(RenderParams params, Renderer oldRenderer) {
         this.params = params;
@@ -43,6 +45,15 @@ public class Renderer {
 
         if (oldParams != null &&
             oldParams.surf == params.surf &&
+            oldParams.stc == params.stc
+            ) {
+            stcMapping = oldRenderer.stcMapping;
+        } else {
+            calculateStcMapping();
+        }
+
+        if (oldParams != null &&
+            oldParams.surf == params.surf &&
             oldParams.stc == params.stc &&
             oldParams.time == params.time
             ) {
@@ -51,10 +62,9 @@ public class Renderer {
             applyStcData();
         }
 
-        BufferedImage img = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
-        renderPipeline(img, surf.faces);
+        renderPipeline(surf.faces);
 
-        return img;
+        return result;
     }
 
     double calculateScreenScale(List<Triangle> tris, double imgSize) {
@@ -66,36 +76,40 @@ public class Renderer {
         return imgSize / 2 / maxDist * 0.9;
     }
 
-    void applyStcData() {
-        double[] values = stc.data[params.time];
-
-        for (int q = 0; q < stc.vertexIndices.length; q++) {
-            double baseValue = values[q];
+    void calculateStcMapping() {
+        stcMapping = new int[surf.vertices.size()];
+        for (int stcIdx = 0; stcIdx < stc.vertexIndices.length; stcIdx++) {
             Set<Vertex> currentGeneration = new HashSet<>();
-            currentGeneration.add(surf.vertices.get(stc.vertexIndices[q]));
+            currentGeneration.add(surf.vertices.get(stc.vertexIndices[stcIdx]));
             for (int i = 0; i < SMOOTH_STEPS - 1; i++) {
                 Set<Vertex> nextGeneration = new HashSet<>();
                 for (Vertex v : currentGeneration) {
-                    v.value = baseValue;
+                    stcMapping[v.index] = stcIdx;
                     nextGeneration.addAll(v.neighbours);
                 }
                 currentGeneration = nextGeneration;
             }
             for (Vertex v : currentGeneration) {
-                v.value = baseValue;
+                stcMapping[v.index] = stcIdx;
             }
         }
     }
 
-    void renderPipeline(BufferedImage output, List<Triangle> tris) {
+    void applyStcData() {
+        double[] values = stc.data[params.time];
+        for (int q = 0; q < surf.vertices.size(); q++) {
+            surf.vertices.get(q).value = values[stcMapping[q]];
+        }
+    }
+
+    void renderPipeline(List<Triangle> tris) {
         if (oldParams != null &&
             oldParams.surf == params.surf &&
             oldParams.stc == params.stc &&
             oldParams.heading == params.heading &&
             oldParams.pitch == params.pitch &&
             oldParams.width == params.width &&
-            oldParams.height == params.height &&
-            oldParams.time == params.time
+            oldParams.height == params.height
             ) {
             zBuffer = oldRenderer.zBuffer;
         } else {
@@ -117,15 +131,31 @@ public class Renderer {
             }
         }
 
-        for (int x = 0; x < params.width; x++) {
-            for (int y = 0; y < params.height; y++) {
-                Pixel p = zBuffer[x][y];
-                if (p != null) {
-                    Point3d invLightDir = new Point3d(0, 0, 1);
-                    double angleCos = Math.abs(p.normal.angleCos(invLightDir));
-                    double val = p.value;
-                    Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), angleCos);
-                    output.setRGB(x, y, getPixel(c));
+        if (oldParams != null &&
+            oldParams.surf == params.surf &&
+            oldParams.stc == params.stc &&
+            oldParams.heading == params.heading &&
+            oldParams.pitch == params.pitch &&
+            oldParams.width == params.width &&
+            oldParams.height == params.height &&
+            oldParams.time == params.time &&
+            oldParams.lowThreshold == params.lowThreshold &&
+            oldParams.highThreshold == params.highThreshold
+            ) {
+            result = oldRenderer.result;
+        } else {
+            result = new BufferedImage(params.width, params.height, BufferedImage.TYPE_INT_RGB);
+
+            for (int x = 0; x < params.width; x++) {
+                for (int y = 0; y < params.height; y++) {
+                    Pixel p = zBuffer[x][y];
+                    if (p != null) {
+                        Point3d invLightDir = new Point3d(0, 0, 1);
+                        double angleCos = Math.abs(p.normal.angleCos(invLightDir));
+                        double val = (p.tri.v1.value + p.tri.v2.value + p.tri.v3.value) / 3;
+                        Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), angleCos);
+                        result.setRGB(x, y, getPixel(c));
+                    }
                 }
             }
         }
@@ -149,7 +179,6 @@ public class Renderer {
         // our triangles are always very small
         // so we can skip doing barycentrics
         // and just average three vertices
-        double value = (t.v1.value + t.v2.value + t.v3.value) / 3;
         double depth = (v1p.z + v2p.z + v3p.z) / 3;
 
         int minX = (int) Math.ceil(Math.min(p1.x, Math.min(p2.x, p3.x)));
@@ -165,7 +194,7 @@ public class Renderer {
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                    pixels.add(new Pixel(x, y, value, depth, t, normal));
+                    pixels.add(new Pixel(x, y, depth, t, normal));
                 }
             }
         }
