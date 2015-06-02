@@ -21,7 +21,8 @@ public class Renderer {
     private Stc stc;
     private double screenScale;
     private int[] stcMapping;
-    private Pixel[][] zBuffer;
+    private int zBufferWidth;
+    private Pixel[] zBuffer;
     private BufferedImage result;
 
     public Renderer(RenderParams params, Renderer oldRenderer) {
@@ -115,7 +116,8 @@ public class Renderer {
         } else {
             calculateCameraTransform();
 
-            zBuffer = new Pixel[params.width][params.height];
+            zBuffer = new Pixel[params.width * params.height];
+            zBufferWidth = params.width;
 
             for (Triangle t : tris) {
                 rasterizeTriangle(t);
@@ -139,7 +141,7 @@ public class Renderer {
 
             for (int y = 0; y < params.height; y++) {
                 for (int x = 0; x < params.width; x++) {
-                    Pixel p = zBuffer[y][x];
+                    Pixel p = zBuffer[y * zBufferWidth + x];
                     if (p != null) {
                         Point3d invLightDir = new Point3d(0, 0, 1);
                         double angleCos = Math.abs(p.normal.angleCos(invLightDir));
@@ -179,15 +181,16 @@ public class Renderer {
 
         double triangleArea = (p1.y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - p1.x);
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
+        for (int y = minY; y <= maxY; y++) {
+            for (int x = minX; x <= maxX; x++) {
                 double b1 = ((y - p3.y) * (p2.x - p3.x) + (p2.y - p3.y) * (p3.x - x)) / triangleArea;
                 double b2 = ((y - p1.y) * (p3.x - p1.x) + (p3.y - p1.y) * (p1.x - x)) / triangleArea;
                 double b3 = ((y - p2.y) * (p1.x - p2.x) + (p1.y - p2.y) * (p2.x - x)) / triangleArea;
                 if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1) {
-                    Pixel prev = zBuffer[x][y];
+                    int zBufferIndex = y * zBufferWidth + x;
+                    Pixel prev = zBuffer[zBufferIndex];
                     if (prev == null || prev.depth < depth) {
-                        zBuffer[y][x] = new Pixel(x, y, depth, t, normal);
+                        zBuffer[zBufferIndex] = new Pixel(depth, t, normal);
                     }
                 }
             }
