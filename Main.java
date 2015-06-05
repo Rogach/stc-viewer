@@ -154,7 +154,12 @@ public class Main extends Application {
         form.setHgrow(timeSlider, Priority.ALWAYS);
         form.add(timeSlider, 1, 1);
 
-        form.add(new Label("Thresholds"), 0, 2);
+        Label timeLabel = new Label("? ms");
+        timeLabel.textProperty().bind(Bindings.format("%.0f ms", timeSlider.valueProperty()));
+        form.add(timeLabel, 1, 2);
+        form.setHalignment(timeLabel, HPos.CENTER);
+
+        form.add(new Label("Thresholds"), 0, 3);
 
         thresholdSlider = new RangeSlider();
         thresholdSlider.setLowValue(0);
@@ -180,17 +185,17 @@ public class Main extends Application {
                 }
             });
         form.setHgrow(thresholdSlider, Priority.ALWAYS);
-        form.add(thresholdSlider, 1, 2);
+        form.add(thresholdSlider, 1, 3);
 
         Label thresholdsLabel = new Label("12 --- 20");
         thresholdsLabel.textProperty().bind(Bindings.format("%.3e --- %.3e", thresholdSlider.lowValueProperty(), thresholdSlider.highValueProperty()));
-        form.add(thresholdsLabel, 1, 3);
+        form.add(thresholdsLabel, 1, 4);
         form.setHalignment(thresholdsLabel, HPos.CENTER);
 
         ObservableList<StcHolder> stcFiles = FXCollections.observableArrayList();
 
         HBox stcManipulation = new HBox(5);
-        form.add(stcManipulation, 0, 4);
+        form.add(stcManipulation, 0, 5);
         form.setColumnSpan(stcManipulation, 2);
 
         Button addStcs = new Button("Add stc file");
@@ -231,9 +236,11 @@ public class Main extends Application {
                         Stc stc = selectedStc.getStc();
                         timeSlider.setMin(stc.tmin);
                         timeSlider.setMax(stc.tmin + (stc.data.length - 1) * stc.tstep);
-                        timeSlider.setMajorTickUnit(stc.tstep * 10);
-                        timeSlider.setMinorTickCount(9);
                         timeSlider.setBlockIncrement(stc.tstep);
+                        int majorStepCount = stc.data.length / 6;
+                        timeSlider.setMajorTickUnit(stc.tstep * majorStepCount);
+                        timeSlider.setMinorTickCount(majorStepCount - 1);
+
                         thresholdSlider.setMin(0);
                         double maxValue = 0;
                         for (int t = 0; t < stc.data.length; t++) {
@@ -257,7 +264,7 @@ public class Main extends Application {
                 }
                 updateRender();
             });
-        form.add(stcList, 0, 5);
+        form.add(stcList, 0, 6);
         form.setColumnSpan(stcList, 2);
         form.setHgrow(stcList, Priority.ALWAYS);
 
