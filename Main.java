@@ -320,7 +320,7 @@ public class Main extends Application {
         if (currentStc != null) {
             String targetPath = currentStc.file.getAbsolutePath().replaceAll("(?i)[lr]h.stc", hemi + ".stc").toLowerCase();
             for (StcHolder stc : stcList.getItems()) {
-                if (stc.file.getAbsolutePath().equals(targetPath)) {
+                if (stc.file.getAbsolutePath().toLowerCase().equals(targetPath)) {
                     stcList.getSelectionModel().select(stc);
                     return true;
                 }
