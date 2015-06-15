@@ -237,9 +237,6 @@ public class Main extends Application {
         stcManipulation.getChildren().add(clearStcs);
 
         stcList = new ListView<StcHolder>();
-        stcList.setMinHeight(138);
-        stcList.setPrefHeight(138);
-        stcList.setMaxHeight(138);
         stcList.setItems(stcFiles);
         stcList.getSelectionModel().selectedItemProperty().addListener(e -> {
                 StcHolder selectedStc = stcList.getSelectionModel().getSelectedItem();
@@ -277,15 +274,13 @@ public class Main extends Application {
                 }
                 updateRender();
             });
-        form.add(stcList, 0, 6);
-        form.setColumnSpan(stcList, 2);
-        form.setHgrow(stcList, Priority.ALWAYS);
 
         root.getChildren().add(saveButton);
         root.getChildren().add(renderCanvas);
         root.getChildren().add(pitchSlider);
         root.getChildren().add(headingSlider);
         root.getChildren().add(form);
+        root.getChildren().add(stcList);
 
         root.setHorizontalGroup(root.createParallelGroup()
                                 .addGroup(root.createSequentialGroup()
@@ -298,7 +293,8 @@ public class Main extends Application {
                                 .addGroup(root.createSequentialGroup()
                                           .addNode(headingSlider, 0, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE)
                                           .addGap(20))
-                                .addNode(form));
+                                .addNode(form)
+                                .addNode(stcList));
 
         root.setVerticalGroup(root.createSequentialGroup()
                               .addNode(saveButton)
@@ -309,7 +305,9 @@ public class Main extends Application {
                               .addGap(4)
                               .addNode(headingSlider, 16)
                               .addGap(5)
-                              .addNode(form));
+                              .addNode(form, GroupLayoutPane.PREFERRED_SIZE)
+                              .addGap(5)
+                              .addNode(stcList, 138, 138, Short.MAX_VALUE));
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
