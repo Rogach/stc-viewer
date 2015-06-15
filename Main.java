@@ -42,6 +42,9 @@ public class Main extends Application {
 
     ListView<StcHolder> stcList;
 
+    File rememberedStcDir = null;
+    File rememberedImageOutputDir = null;
+
     @Override
     public void start(Stage stage) throws Exception {
         stage.setTitle("stc viewer");
@@ -55,8 +58,12 @@ public class Main extends Application {
                 FileChooser fch = new FileChooser();
                 fch.setTitle("Select destination file");
                 fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG files", "*.png"));
+                if (rememberedImageOutputDir != null) {
+                    fch.setInitialDirectory(rememberedImageOutputDir);
+                }
                 File selectedFile = fch.showSaveDialog(stage);
                 if (selectedFile != null) {
+                    rememberedImageOutputDir = selectedFile.getParentFile();
                     if (!selectedFile.getPath().toLowerCase().endsWith(".png")) {
                         selectedFile = new File(selectedFile.getPath() + ".png");
                     }
@@ -203,8 +210,14 @@ public class Main extends Application {
                 FileChooser fch = new FileChooser();
                 fch.setTitle("Select stc files");
                 fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("stc files", "*.stc"));
+                if (rememberedStcDir != null) {
+                    fch.setInitialDirectory(rememberedStcDir);
+                }
                 List<File> selectedFiles = fch.showOpenMultipleDialog(stage);
                 if (selectedFiles != null) {
+                    if (!selectedFiles.isEmpty()) {
+                        rememberedStcDir = selectedFiles.get(0).getParentFile();
+                    }
                     StcHolder selectedStc = stcList.getSelectionModel().getSelectedItem();
                     for (File f : selectedFiles) {
                         stcFiles.add(new StcHolder(f));
