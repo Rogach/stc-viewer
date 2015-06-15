@@ -70,6 +70,11 @@ public class Renderer {
         return result;
     }
 
+    public void dispose() {
+        oldRenderer = null;
+        oldParams = null;
+    }
+
     double calculateScreenScale(List<Triangle> tris, double imgSize) {
         double maxDist = 0;
         for (Triangle t : tris) {

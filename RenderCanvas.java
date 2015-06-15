@@ -29,6 +29,7 @@ public class RenderCanvas extends Canvas {
             try {
                 long stt = System.currentTimeMillis();
                 BufferedImage render = r.render();
+                r.dispose();
                 long end = System.currentTimeMillis();
                 System.out.printf("rendering took %d ms\n", end - stt);
 
