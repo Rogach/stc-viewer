@@ -8,12 +8,24 @@ public class Stc {
     public double tstep;
     public int[] vertexIndices;
     public double[][] data;
+    public boolean noActivity;
 
     public Stc(double tmin, double tstep, int[] vertexIndices, double[][] data) {
         this.tmin = tmin;
         this.tstep = tstep;
         this.vertexIndices = vertexIndices;
         this.data = data;
+
+        this.noActivity = true;
+        activitySearch:
+        for (int q = 0; q < data.length; q++) {
+            for (int w = 0; w < data[0].length; w++) {
+                if (data[q][w] != 0) {
+                    this.noActivity = false;
+                    break activitySearch;
+                }
+            }
+        }
     }
 
     private static WeakHashMap<String, Stc> stcCache = new WeakHashMap<>();

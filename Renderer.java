@@ -162,7 +162,11 @@ public class Renderer {
     }
 
     double scaleValue(double val) {
-        return Math.min(1, Math.max(0, Math.abs(val) - params.lowThreshold) / (params.highThreshold - params.lowThreshold));
+        if (stc.noActivity) {
+            return 0;
+        } else {
+            return Math.min(1, Math.max(0, Math.abs(val) - params.lowThreshold) / (params.highThreshold - params.lowThreshold));
+        }
     }
 
     void rasterizeTriangle(Triangle t) {
@@ -262,6 +266,10 @@ public class Renderer {
         return new Color(Math.max(0, a.getRed() + sh),
                          Math.max(0, a.getGreen() + sh),
                          Math.max(0, a.getBlue() + sh));
+    }
+
+    public boolean hasNoActivity() {
+        return stc.noActivity;
     }
 
 }

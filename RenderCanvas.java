@@ -34,6 +34,10 @@ public class RenderCanvas extends Canvas {
                 System.out.printf("rendering took %d ms\n", end - stt);
 
                 g.drawImage(SwingFXUtils.toFXImage(render, null), 0, 0);
+                if (r.hasNoActivity()) {
+                    g.setFill(Color.WHITE);
+                    g.fillText("no activity", 3, 16);
+                }
                 oldRenderer = r;
             } catch (Exception e) {
                 e.printStackTrace();

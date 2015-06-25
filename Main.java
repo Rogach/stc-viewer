@@ -258,7 +258,11 @@ public class Main extends Application {
                                 if (stc.data[t][i] > maxValue) maxValue = stc.data[t][i];
                             }
                         }
-                        thresholdSlider.setMax(maxValue);
+                        if (maxValue == 0) {
+                            thresholdSlider.setMax(1);
+                        } else {
+                            thresholdSlider.setMax(maxValue);
+                        }
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
