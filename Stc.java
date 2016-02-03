@@ -28,7 +28,7 @@ public class Stc {
         }
     }
 
-    private static WeakHashMap<String, Stc> stcCache = new WeakHashMap<>();
+    private static Map<String, Stc> stcCache = new WeakHashMap<>();
 
     public static Stc load(String filename) throws Exception {
         Stc fromCache = stcCache.get(filename);

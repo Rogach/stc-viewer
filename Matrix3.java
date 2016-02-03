@@ -1,14 +1,14 @@
 public class Matrix3 {
-    
-    public double[] data;
 
-    public Matrix3(double[] data) {
+    public float[] data;
+
+    public Matrix3(float[] data) {
         assert data.length == 9;
         this.data = data;
     }
-    
+
     public Matrix3 multiply(Matrix3 matrix) {
-        double[] result = new double[9];
+        float[] result = new float[9];
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
                 for (int i = 0; i < 3; i++) {
@@ -20,8 +20,8 @@ public class Matrix3 {
     }
 
     public Point3d multiply(Point3d p) {
-        double[] input = new double[] { p.x, p.y, p.z };
-        double[] result = new double[3];
+        float[] input = new float[] { p.x, p.y, p.z };
+        float[] result = new float[3];
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
                 result[y] += data[y * 3 + x] * input[x];
@@ -29,8 +29,8 @@ public class Matrix3 {
         }
         return new Point3d(result[0], result[1], result[2]);
     }
-    
-    public static Matrix3 ID = new Matrix3(new double[] {
+
+    public static Matrix3 ID = new Matrix3(new float[] {
         1, 0, 0,
         0, 1, 0,
         0, 0, 1

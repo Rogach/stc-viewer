@@ -1,23 +1,23 @@
 public class Point3d {
-    public double x;
-    public double y;
-    public double z;
+    public float x;
+    public float y;
+    public float z;
 
-    public Point3d(double x, double y, double z) {
+    public Point3d(float x, float y, float z) {
         this.x = x;
         this.y = y;
         this.z = z;
     }
 
-    public double getX() {
+    public float getX() {
         return x;
     }
 
-    public double getY() {
+    public float getY() {
         return y;
     }
 
-    public double getZ() {
+    public float getZ() {
         return z;
     }
 
@@ -37,31 +37,31 @@ public class Point3d {
         return new Point3d(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
     }
 
-    public double dist(Point3d other) {
-        double dx = x - other.x;
-        double dy = y - other.y;
-        double dz = z - other.z;
-        return Math.sqrt(dx*dx + dy*dy + dz*dz);
+    public float dist(Point3d other) {
+        float dx = x - other.x;
+        float dy = y - other.y;
+        float dz = z - other.z;
+        return (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
     }
 
     /* Distance to origin */
-    public double length() {
-        return Math.sqrt(x*x + y*y + z*z);
+    public float length() {
+        return (float) Math.sqrt(x*x + y*y + z*z);
     }
 
     public Point3d norm() {
-        double l = length();
+        float l = length();
         return new Point3d(x / l, y / l, z / l);
     }
 
-    public double angleCos(Point3d other) {
+    public float angleCos(Point3d other) {
         // cos = dot(a, b) / (||a|| * ||b||)
-        double dot = x * other.x + y * other.y + z * other.z;
+        float dot = x * other.x + y * other.y + z * other.z;
         return dot / (this.length() * other.length());
     }
 
-    public double angle(Point3d other) {
-        return Math.acos(angleCos(other));
+    public float angle(Point3d other) {
+        return (float) Math.acos(angleCos(other));
     }
 
     @Override
@@ -72,9 +72,9 @@ public class Point3d {
     @Override
     public int hashCode() {
         int hash = 5;
-        hash = 23 * hash + (int) (Double.doubleToLongBits(this.x) ^ (Double.doubleToLongBits(this.x) >>> 32));
-        hash = 23 * hash + (int) (Double.doubleToLongBits(this.y) ^ (Double.doubleToLongBits(this.y) >>> 32));
-        hash = 23 * hash + (int) (Double.doubleToLongBits(this.z) ^ (Double.doubleToLongBits(this.z) >>> 32));
+        hash = 23 * hash + (int) (Float.floatToIntBits(this.x) ^ (Float.floatToIntBits(this.x) >>> 32));
+        hash = 23 * hash + (int) (Float.floatToIntBits(this.y) ^ (Float.floatToIntBits(this.y) >>> 32));
+        hash = 23 * hash + (int) (Float.floatToIntBits(this.z) ^ (Float.floatToIntBits(this.z) >>> 32));
         return hash;
     }
 
@@ -87,13 +87,13 @@ public class Point3d {
             return false;
         }
         final Point3d other = (Point3d) obj;
-        if (Double.doubleToLongBits(this.x) != Double.doubleToLongBits(other.x)) {
+        if (Float.floatToIntBits(this.x) != Float.floatToIntBits(other.x)) {
             return false;
         }
-        if (Double.doubleToLongBits(this.y) != Double.doubleToLongBits(other.y)) {
+        if (Float.floatToIntBits(this.y) != Float.floatToIntBits(other.y)) {
             return false;
         }
-        if (Double.doubleToLongBits(this.z) != Double.doubleToLongBits(other.z)) {
+        if (Float.floatToIntBits(this.z) != Float.floatToIntBits(other.z)) {
             return false;
         }
         return true;

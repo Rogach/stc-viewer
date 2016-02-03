@@ -21,7 +21,7 @@ public class Renderer {
 
     private Surface surf;
     private Stc stc;
-    private double screenScale;
+    private float screenScale;
     private int[] stcMapping;
     private int zBufferWidth;
     private Pixel[] zBuffer;
@@ -75,13 +75,13 @@ public class Renderer {
         oldParams = null;
     }
 
-    double calculateScreenScale(List<Triangle> tris, double imgSize) {
-        double maxDist = 0;
+    float calculateScreenScale(List<Triangle> tris, double imgSize) {
+        float maxDist = 0;
         for (Triangle t : tris) {
-            double d = Math.max(t.v1.p.length(), Math.max(t.v2.p.length(), t.v3.p.length()));
+            float d = Math.max(t.v1.p.length(), Math.max(t.v2.p.length(), t.v3.p.length()));
             if (d > maxDist) maxDist = d;
         }
-        return imgSize / 2 / maxDist * 0.9;
+        return (float) (imgSize / 2 / maxDist * 0.9);
     }
 
     void calculateStcMapping() {
@@ -206,31 +206,31 @@ public class Renderer {
     }
 
     // precalculated transform values
-    private double txx;
-    private double txy;
-    private double txz;
-    private double tyx;
-    private double tyy;
-    private double tyz;
-    private double tzx;
-    private double tzy;
-    private double tzz;
+    private float txx;
+    private float txy;
+    private float txz;
+    private float tyx;
+    private float tyy;
+    private float tyz;
+    private float tzx;
+    private float tzy;
+    private float tzz;
 
     void calculateCameraTransform() {
-        Matrix3 scaleTransform = new Matrix3(new double[] {
+        Matrix3 scaleTransform = new Matrix3(new float[] {
                 screenScale, 0, 0,
                 0, screenScale, 0,
                 0, 0, screenScale
             });
-        Matrix3 headingTransform = new Matrix3(new double[] {
-                Math.cos(params.heading), 0, Math.sin(params.heading),
+        Matrix3 headingTransform = new Matrix3(new float[] {
+                (float) Math.cos(params.heading), 0, (float) Math.sin(params.heading),
                 0, 1, 0,
-                -Math.sin(params.heading), 0, Math.cos(params.heading)
+                (float) (-Math.sin(params.heading)), 0, (float) Math.cos(params.heading)
             });
-        Matrix3 pitchTransform = new Matrix3(new double[] {
+        Matrix3 pitchTransform = new Matrix3(new float[] {
                 1, 0, 0,
-                0, Math.cos(params.pitch), -Math.sin(params.pitch),
-                0, Math.sin(params.pitch), Math.cos(params.pitch)
+                0, (float) Math.cos(params.pitch), (float) (-Math.sin(params.pitch)),
+                0, (float) Math.sin(params.pitch), (float) Math.cos(params.pitch)
             });
         Matrix3 cameraTransformMatrix = scaleTransform.multiply(pitchTransform.multiply(headingTransform));
         txx = cameraTransformMatrix.data[0];

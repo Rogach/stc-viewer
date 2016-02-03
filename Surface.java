@@ -12,7 +12,7 @@ public class Surface {
         this.faces = faces;
     }
 
-    private static Map<String, Surface> surfaceCache = new WeakHashMap<>();
+    private static Map<String, Surface> surfaceCache = new HashMap<>();
 
     public static Surface load(String filename) throws Exception {
         Surface fromCache = surfaceCache.get(filename);
