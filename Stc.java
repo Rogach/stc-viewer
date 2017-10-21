@@ -8,10 +8,10 @@ public class Stc {
     public double tmin;
     public double tstep;
     public int[] vertexIndices;
-    public double[][] data;
+    public float[][] data;
     public boolean noActivity;
 
-    public Stc(double tmin, double tstep, int[] vertexIndices, double[][] data) {
+    public Stc(double tmin, double tstep, int[] vertexIndices, float[][] data) {
         this.tmin = tmin;
         this.tstep = tstep;
         this.vertexIndices = vertexIndices;
@@ -55,7 +55,7 @@ public class Stc {
                 }
 
                 int ntimes = buffer.getInt();
-                double[][] data = new double[ntimes][nvert];
+                float[][] data = new float[ntimes][nvert];
                 for (int t = 0; t < ntimes; t++) {
                     for (int q = 0; q < nvert; q++) {
                         data[t][q] = buffer.getFloat();

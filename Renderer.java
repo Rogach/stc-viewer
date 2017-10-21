@@ -104,7 +104,7 @@ public class Renderer {
     }
 
     void applyStcData() {
-        double[] values = stc.data[params.time];
+        float[] values = stc.data[params.time];
         for (int q = 0; q < surf.vertices.size(); q++) {
             surf.vertices.get(q).value = values[stcMapping[q]];
         }
