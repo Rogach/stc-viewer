@@ -2,7 +2,7 @@ import java.io.*;
 import java.nio.*;
 import java.nio.channels.*;
 import java.util.*;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 
 public class Stc {
     public double tmin;
@@ -29,10 +29,10 @@ public class Stc {
         }
     }
 
-    private static Map<String, WeakReference<Stc>> stcCache = new HashMap<>();
+    private static Map<String, SoftReference<Stc>> stcCache = new HashMap<>();
 
     public static Stc load(String filename) throws Exception {
-        WeakReference<Stc> referenceFromCache = stcCache.get(filename);
+        SoftReference<Stc> referenceFromCache = stcCache.get(filename);
         if (referenceFromCache != null && referenceFromCache.get() != null) {
             return referenceFromCache.get();
         }
@@ -66,7 +66,7 @@ public class Stc {
                                   nvert,
                                   ntimes);
                 Stc stc = new Stc(tmin, tstep, vertexIndices, data);
-                stcCache.put(filename, new WeakReference(stc));
+                stcCache.put(filename, new SoftReference<Stc>(stc));
 
                 System.out.printf("loading stc took %d ms\n", System.currentTimeMillis() - startTime);
                 return stc;

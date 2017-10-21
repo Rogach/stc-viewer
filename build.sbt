@@ -2,7 +2,7 @@ version := "1.0.0"
 
 Revolver.settings
 
-javacOptions ++= Seq("-source", "1.8")
+javacOptions ++= Seq("-source", "1.8", "-Xlint:unchecked")
 
 javaOptions ++= Seq(
   "-Dprism.order=sw",
