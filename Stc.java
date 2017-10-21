@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.*;
 import java.nio.channels.*;
 import java.util.*;
+import java.lang.ref.WeakReference;
 
 public class Stc {
     public double tmin;
@@ -28,12 +29,15 @@ public class Stc {
         }
     }
 
-    private static Map<String, Stc> stcCache = new WeakHashMap<>();
+    private static Map<String, WeakReference<Stc>> stcCache = new HashMap<>();
 
     public static Stc load(String filename) throws Exception {
-        Stc fromCache = stcCache.get(filename);
-        if (fromCache != null) return fromCache;
+        WeakReference<Stc> referenceFromCache = stcCache.get(filename);
+        if (referenceFromCache != null && referenceFromCache.get() != null) {
+            return referenceFromCache.get();
+        }
 
+        long startTime = System.currentTimeMillis();
         File file = new File(filename);
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel fch = fis.getChannel()) {
@@ -58,9 +62,13 @@ public class Stc {
                     }
                 }
 
+                System.out.printf("loaded stc with %d vertices and %d time points\n",
+                                  nvert,
+                                  ntimes);
                 Stc stc = new Stc(tmin, tstep, vertexIndices, data);
-                stcCache.put(filename, stc);
+                stcCache.put(filename, new WeakReference(stc));
 
+                System.out.printf("loading stc took %d ms\n", System.currentTimeMillis() - startTime);
                 return stc;
             }
     }

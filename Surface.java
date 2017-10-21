@@ -18,6 +18,7 @@ public class Surface {
         Surface fromCache = surfaceCache.get(filename);
         if (fromCache != null) return fromCache;
 
+        long startTime = System.currentTimeMillis();
         File file = new File(filename);
         boolean isLeft = filename.contains("lh");
         try (FileInputStream fis = new FileInputStream(file);
@@ -68,9 +69,13 @@ public class Surface {
                     vertices.get(i3).neighbours.add(vertices.get(i2));
                     faces.add(new Triangle(vertices.get(i1), vertices.get(i2), vertices.get(i3)));
                 }
+                System.out.printf("loaded surface with %d vertices and %d faces\n",
+                                  vertices.size(),
+                                  faces.size());
                 Surface surf = new Surface(vertices, faces);
                 surfaceCache.put(filename, surf);
 
+                System.out.printf("loading surface took %d ms\n", System.currentTimeMillis() - startTime);
                 return surf;
             }
     }
