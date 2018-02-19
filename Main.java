@@ -248,8 +248,10 @@ public class Main extends Application {
                         timeSlider.setMax(stc.tmin + (stc.data.length - 1) * stc.tstep);
                         timeSlider.setBlockIncrement(stc.tstep);
                         int majorStepCount = stc.data.length / 6;
-                        timeSlider.setMajorTickUnit(stc.tstep * majorStepCount);
-                        timeSlider.setMinorTickCount(majorStepCount - 1);
+                        if (majorStepCount > 1) {
+                            timeSlider.setMajorTickUnit(stc.tstep * majorStepCount);
+                            timeSlider.setMinorTickCount(majorStepCount - 1);
+                        }
 
                         thresholdSlider.setMin(0);
                         double maxValue = 0;
