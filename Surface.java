@@ -14,16 +14,46 @@ public class Surface {
 
     private static Map<String, Surface> surfaceCache = new HashMap<>();
 
-    public static Surface load(String filename) throws Exception {
-        Surface fromCache = surfaceCache.get(filename);
+    public static Surface load(String filenameTemplate) throws Exception {
+        Surface fromCache = surfaceCache.get(filenameTemplate);
         if (fromCache != null) return fromCache;
 
         long startTime = System.currentTimeMillis();
-        File file = new File(filename);
-        boolean isLeft = filename.contains("lh");
-        try (FileInputStream fis = new FileInputStream(file);
+
+        File curvFile = new File(filenameTemplate + ".curv");
+        boolean[] isSulcus = null;
+        boolean hasSulcusInfo = curvFile.exists();
+        if (hasSulcusInfo) {
+            try (FileInputStream fis = new FileInputStream(curvFile);
+                 FileChannel fch = fis.getChannel()
+                 ) {
+                ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, curvFile.length());
+                buffer.order(ByteOrder.BIG_ENDIAN);
+
+                // read signature
+                byte sig1 = buffer.get();
+                byte sig2 = buffer.get();
+                byte sig3 = buffer.get();
+                if (sig1 != (byte) 0xff || sig2 != (byte) 0xff || sig3 != (byte) 0xff) {
+                    throw new Exception("input file is not in freesurfer sulc format");
+                }
+
+                int nvert = buffer.getInt();
+                isSulcus = new boolean[nvert];
+
+                buffer.getInt(); // fnum?
+                buffer.getInt(); // vals_per_vertex == 1?
+                for (int i = 0; i < nvert; i++) {
+                    isSulcus[i] = buffer.getFloat() > 0;
+                }
+            }
+        }
+
+        File surfaceFile = new File(filenameTemplate + ".inflated");
+        boolean isLeft = filenameTemplate.endsWith("lh");
+        try (FileInputStream fis = new FileInputStream(surfaceFile);
              FileChannel fch = fis.getChannel()) {
-                ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
+                ByteBuffer buffer = fch.map(FileChannel.MapMode.READ_ONLY, 0, surfaceFile.length());
                 buffer.order(ByteOrder.BIG_ENDIAN);
 
                 // read signature
@@ -67,13 +97,14 @@ public class Surface {
                     vertices.get(i2).neighbours.add(vertices.get(i3));
                     vertices.get(i3).neighbours.add(vertices.get(i1));
                     vertices.get(i3).neighbours.add(vertices.get(i2));
-                    faces.add(new Triangle(vertices.get(i1), vertices.get(i2), vertices.get(i3)));
+                    boolean inSulcus = hasSulcusInfo && isSulcus[i1] && isSulcus[i2] && isSulcus[i3];
+                    faces.add(new Triangle(vertices.get(i1), vertices.get(i2), vertices.get(i3), inSulcus));
                 }
                 System.out.printf("loaded surface with %d vertices and %d faces\n",
                                   vertices.size(),
                                   faces.size());
                 Surface surf = new Surface(vertices, faces);
-                surfaceCache.put(filename, surf);
+                surfaceCache.put(filenameTemplate, surf);
 
                 System.out.printf("loading surface took %d ms\n", System.currentTimeMillis() - startTime);
                 return surf;

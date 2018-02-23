@@ -10,7 +10,8 @@ public class Renderer {
 
     public static Color POSITIVE_COLOR = Color.YELLOW;
     public static Color NEGATIVE_COLOR = Color.CYAN;
-    public static Color SURFACE_COLOR = new Color(100, 100, 100);
+    public static Color SURFACE_COLOR = new Color(150, 150, 150);
+    public static Color SULCUS_COLOR = new Color(80, 80, 80);
     public static int SMOOTH_STEPS = 3;
 
     Point3d invLightDir = new Point3d(0, 0, 1);
@@ -153,7 +154,7 @@ public class Renderer {
                     Pixel p = zBuffer[y * zBufferWidth + x];
                     if (p != null) {
                         double val = (p.tri.v1.value + p.tri.v2.value + p.tri.v3.value) / 3;
-                        Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, SURFACE_COLOR, scaleValue(val)), p.normalCos);
+                        Color c = shadeColor(interpolateColors((val >= 0) ? POSITIVE_COLOR : NEGATIVE_COLOR, p.color, scaleValue(val)), p.normalCos);
                         result.setRGB(x, y, getPixel(c));
                     }
                 }
@@ -198,7 +199,7 @@ public class Renderer {
                     Pixel prev = zBuffer[zBufferIndex];
                     if (prev == null || prev.depth < depth) {
                         double normalCos = Math.abs(normal.angleCos(invLightDir));
-                        zBuffer[zBufferIndex] = new Pixel(depth, t, normalCos);
+                        zBuffer[zBufferIndex] = new Pixel(depth, t, normalCos, t.inSulcus ? SULCUS_COLOR : SURFACE_COLOR);
                     }
                 }
             }

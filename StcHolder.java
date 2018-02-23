@@ -33,7 +33,7 @@ public class StcHolder {
     public Surface getSurface() throws Exception {
         Surface cachedSurface = surfRef.get();
         if (cachedSurface == null) {
-            Surface surface = Surface.load(file.getParentFile().getPath() + "/" + getHemisphere() + ".inflated");
+            Surface surface = Surface.load(file.getParentFile().getPath() + "/" + getHemisphere());
             surfRef = new SoftReference<Surface>(surface);
             return surface;
         } else {

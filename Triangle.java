@@ -4,11 +4,13 @@ public class Triangle {
     public Vertex v3;
 
     public Point3d normal;
+    public boolean inSulcus;
 
-    public Triangle(Vertex v1, Vertex v2, Vertex v3) {
+    public Triangle(Vertex v1, Vertex v2, Vertex v3, boolean inSulcus) {
         this.v1 = v1;
         this.v2 = v2;
         this.v3 = v3;
+        this.inSulcus = inSulcus;
         normal = (v2.p.sub(v1.p)).cross(v3.p.sub(v1.p)).norm();
     }
 
